@@ -1,0 +1,21 @@
+id,codigo,nombre,simbolo
+1,ARS,Peso argentino,$
+2,USD,Dólar estadounidense,US$
+3,EUR,Euro,€
+4,BRL,Real brasileño,R$
+5,UYU,Peso uruguayo,$U
+6,CLP,Peso chileno,CLP$
+7,PYG,Guaraní paraguayo,₲
+8,BOB,Boliviano,Bs
+9,PEN,Sol peruano,S/
+10,COP,Peso colombiano,COL$
+11,MXN,Peso mexicano,MX$
+12,GBP,Libra esterlina,£
+13,JPY,Yen japonés,¥
+14,CNY,Yuan chino,¥
+15,CHF,Franco suizo,CHF
+16,CAD,Dólar canadiense,C$
+17,AUD,Dólar australiano,A$
+18,NZD,Dólar neozelandés,NZ$
+19,INR,Rupia india,₹
+20,KRW,Won surcoreano,₩

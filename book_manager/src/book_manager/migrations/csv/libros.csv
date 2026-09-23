@@ -1,0 +1,21 @@
+id,isbn,titulo,autor,editorial_id,genero_id
+1,9789875666474,El Principito,Antoine de Saint-Exupéry,1,7
+2,9788497592208,Cien años de soledad,Gabriel García Márquez,2,1
+3,9789505470638,Rayuela,Julio Cortázar,3,1
+4,9789871138142,Ficciones,Jorge Luis Borges,4,1
+5,9789500706409,El Aleph,Jorge Luis Borges,5,1
+6,9788445071409,El Hobbit,J.R.R. Tolkien,6,3
+7,9788445071416,El Señor de los Anillos,J.R.R. Tolkien,6,3
+8,9788497594257,1984,George Orwell,7,2
+9,9788497592581,Rebelión en la granja,George Orwell,7,1
+10,9789504964570,Sapiens,Yuval Noah Harari,1,5
+11,9789877254112,Harry Potter y la piedra filosofal,J.K. Rowling,5,3
+12,9789877254129,Harry Potter y la cámara secreta,J.K. Rowling,5,3
+13,9789500428677,It,Stephen King,3,4
+14,9789506442278,El resplandor,Stephen King,3,4
+15,9789501296295,El nombre de la rosa,Umberto Eco,8,11
+16,9789875665415,Steve Jobs,Walter Isaacson,9,6
+17,9789507880220,El arte de la guerra,Sun Tzu,14,15
+18,9789501298329,Así habló Zaratustra,Friedrich Nietzsche,8,16
+19,9789873752674,Hábitos atómicos,James Clear,20,19
+20,9789877801682,Python para todos,Charles Severance,19,9
