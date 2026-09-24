@@ -1,3 +1,6 @@
+[Ejercicio 5]
+* Dia 5 Creación de los archivos csv y preload.py del ejercicio 5
+
 [Ejercicio 4]
 * Dia 4 Creación de los servicios y su logica del ejercicio 4
 
