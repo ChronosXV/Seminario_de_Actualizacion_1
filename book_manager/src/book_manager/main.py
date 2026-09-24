@@ -13,17 +13,9 @@ from book_manager.ui.console import Consola
 def main(import_default_data: bool = True) -> None:
     """Inicializa y ejecuta el sistema Book Manager."""
 
-    if not import_default_data:
-        print(
-            "No se importaron datos iniciales. "
-            "El sistema necesita repositorios para funcionar."
-        )
-        return
-
     # -------------------------------------------
     # Carga de repositorios y datos iniciales
     # -------------------------------------------
-
     repositorios = cargar_datos()
 
     # -------------------------------------------
