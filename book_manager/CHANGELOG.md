@@ -1,3 +1,5 @@
+[Ejercicio 3]
+* Dia 3 Creación de las repositoios del ejercicio 3
 
 [Ejercicio 2]
 * Dia 2 Creación de las entidades solicitadas en el ejercicio 2
