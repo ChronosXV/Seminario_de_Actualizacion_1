@@ -1,3 +1,6 @@
+[Ejercicio 6]
+* Dia 6 Creación de la estructura del menu de usuario, a lo que incluimos una nueva carpeta dentro de UI, llamada "menus" el cual la usaremos para guadar los archivos de menu.
+
 [Ejercicio 5]
 * Dia 5 Creación de los archivos csv y preload.py del ejercicio 5
 
