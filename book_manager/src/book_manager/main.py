@@ -1,5 +1,12 @@
 
 from book_manager.preload_data.preload_data import cargar_datos
+
+from book_manager.repositories.repositories import (
+    Repositorio,
+    RepositorioStock,
+    RepositorioCotizacionDolar,
+)
+
 from book_manager.services.services import (
     ServicioBase,
     ServicioCotizacionDolar,
@@ -7,6 +14,7 @@ from book_manager.services.services import (
     ServicioPrecio,
     ServicioStock,
 )
+
 from book_manager.ui.console import Consola
 
 
@@ -14,9 +22,35 @@ def main(import_default_data: bool = True) -> None:
     """Inicializa y ejecuta el sistema Book Manager."""
 
     # -------------------------------------------
-    # Carga de repositorios y datos iniciales
+    # Inicialización de repositorios
     # -------------------------------------------
-    repositorios = cargar_datos()
+
+    if import_default_data:
+
+        # Cargar los datos existentes desde CSV
+        # y habilitar persistencia.
+        repositorios = cargar_datos(
+            persistir=True
+        )
+
+        print("Datos iniciales cargados correctamente.")
+
+    else:
+
+        # Crear repositorios vacíos, sin importar
+        # los datos iniciales.
+        repositorios = {
+            "generos": Repositorio(),
+            "editoriales": Repositorio(),
+            "monedas": Repositorio(),
+            "tipos_cotizacion": Repositorio(),
+            "libros": Repositorio(),
+            "precios": Repositorio(),
+            "stock": RepositorioStock(),
+            "cotizaciones": RepositorioCotizacionDolar(),
+        }
+
+        print("Sistema iniciado sin datos iniciales.")
 
     # -------------------------------------------
     # Creación de servicios

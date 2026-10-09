@@ -64,6 +64,7 @@ class MenuStock:
                 return
 
             print("\n--- STOCK ENCONTRADO ---")
+            print(f"Stock ID: {stock.id}")
             print(f"Libro ID: {stock.libro.id}")
             print(f"Título: {stock.libro.titulo}")
             print(f"Cantidad: {stock.cantidad}")
@@ -77,6 +78,7 @@ class MenuStock:
         try:
             print("\n--- CREAR STOCK ---")
 
+            stock_id = int(input("ID del stock: "))
             libro_id = int(input("ID del libro: "))
             cantidad = int(input("Cantidad: "))
 
@@ -86,7 +88,12 @@ class MenuStock:
                 print("\nEl libro indicado no existe.")
                 return
 
+            if self.servicio_stock.obtener_por_libro(libro_id) is not None:
+                print("\nEl libro ya tiene un registro de stock.")
+                return
+
             stock = Stock(
+                id=stock_id,
                 libro=libro,
                 cantidad=cantidad,
             )
@@ -120,6 +127,7 @@ class MenuStock:
             cantidad = int(input("Nueva cantidad: "))
 
             stock_modificado = Stock(
+                id=stock_actual.id,
                 libro=stock_actual.libro,
                 cantidad=cantidad,
             )
@@ -160,5 +168,5 @@ class MenuStock:
 
             print("\nStock eliminado correctamente.")
 
-        except ValueError:
-            print("\nEl ID debe ser un número entero.")
+        except ValueError as error:
+            print(f"\nError: {error}")

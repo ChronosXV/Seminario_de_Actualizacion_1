@@ -21,13 +21,13 @@ from book_manager.repositories.repositories import (
 )
 
 
-def cargar_datos() -> Dict[str, object]:
-    """Carga los datos iniciales desde los archivos CSV."""
+def cargar_datos(ruta_base=None, persistir=True) -> Dict[str, object]:
+    """Carga los datos desde CSV y habilita persistencia opcional."""
 
     ruta_csv = (
-        Path(__file__).resolve().parent.parent
-        / "migrations"
-        / "csv"
+        Path(ruta_base)
+        if ruta_base is not None
+        else Path(__file__).resolve().parent.parent / "migrations" / "csv"
     )
 
     repo_generos = Repositorio[Genero]()
@@ -134,8 +134,7 @@ def cargar_datos() -> Dict[str, object]:
 
             if editorial is None:
                 raise ValueError(
-                    f"Editorial inexistente: "
-                    f"{fila['editorial_id']}"
+                    f"Editorial inexistente: {fila['editorial_id']}"
                 )
 
             if genero is None:
@@ -256,14 +255,27 @@ def cargar_datos() -> Dict[str, object]:
                 tipo_cotizacion=tipo,
                 moneda=moneda,
                 fecha=datetime.strptime(
-                    fila["fecha"],
-                    "%Y-%m-%d",
+                    fila["fecha"], "%Y-%m-%d"
                 ).date(),
                 valor_compra=float(fila["valor_compra"]),
                 valor_venta=float(fila["valor_venta"]),
             )
 
             repo_cotizaciones.crear(cotizacion)
+
+    # -------------------------------------------
+    # Habilitar persistencia CSV
+    # -------------------------------------------
+
+    if persistir:
+        repo_generos._ruta_csv = ruta_csv / "generos.csv"
+        repo_editoriales._ruta_csv = ruta_csv / "editoriales.csv"
+        repo_monedas._ruta_csv = ruta_csv / "monedas.csv"
+        repo_tipos_cotizacion._ruta_csv = ruta_csv / "tipos_cotizacion.csv"
+        repo_libros._ruta_csv = ruta_csv / "libros.csv"
+        repo_precios._ruta_csv = ruta_csv / "precios.csv"
+        repo_stock._ruta_csv = ruta_csv / "stock.csv"
+        repo_cotizaciones._ruta_csv = ruta_csv / "cotizaciones_dolar.csv"
 
     return {
         "generos": repo_generos,
