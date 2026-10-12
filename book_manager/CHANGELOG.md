@@ -1,4 +1,7 @@
 
+[Ejercicio 7]
+* Dia 7 Agregamos al URL:dolarapi.com (API's)  al archivo .env
+
 [Ejercicio 6]
 * Dia 6 Modificaciones en los archivos de configuración.
 
@@ -16,4 +19,3 @@
 
 [Ejercicio 1]
 * Dia 1 Inicialización y configuración de la herramienta de versionado y armado de estructura de directorio
-
