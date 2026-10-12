@@ -1,43 +1,43 @@
-"""
-Módulo encargado de la conexión y gestión de transacciones.
 
-Utiliza SQLAlchemy para configurar la conexión a la base
-de datos y administrar sesiones mediante un Context Manager.
+"""
+Gestión de conexiones y transacciones de Book Manager.
+Compatible con PostgreSQL (Supabase) y SQLite.
 """
 
+import os
 from contextlib import contextmanager
+from typing import Iterator
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
 
 
 class ConexionDB:
-    """
-    Administra la conexión y las transacciones de la base de datos.
 
-    Permite configurar el motor de SQLAlchemy, crear sesiones
-    y administrar automáticamente las transacciones.
+    def __init__(self, url_db: str | None = None) -> None:
 
-    Attributes:
-        url_db (str): URL de conexión a la base de datos.
-        engine (Engine): Motor de conexión de SQLAlchemy.
-        Session (sessionmaker): Fábrica de sesiones.
-    """
-
-    def __init__(self, url_db="sqlite:///book_manager.db"):
-        """
-        Inicializa la configuración de conexión a la base de datos.
-
-        Args:
-            url_db (str): URL de conexión. Por defecto utiliza
-                una base de datos SQLite local.
-        """
-        self.url_db = url_db
-
-        self.engine = create_engine(
-            self.url_db,
-            echo=False
+        self.url_db = (
+            url_db
+            or os.getenv("DATABASE_URL")
+            or "sqlite:///book_manager.db"
         )
+
+        self.engine: Engine = create_engine(
+            self.url_db,
+            echo=False,
+            pool_pre_ping=True
+        )
+
+        if self.engine.dialect.name == "sqlite":
+
+            @event.listens_for(self.engine, "connect")
+            def activar_claves_foraneas(conexion_dbapi, registro_conexion):
+                cursor = conexion_dbapi.cursor()
+                try:
+                    cursor.execute("PRAGMA foreign_keys=ON")
+                finally:
+                    cursor.close()
 
         self.Session = sessionmaker(
             bind=self.engine,
@@ -45,33 +45,12 @@ class ConexionDB:
             expire_on_commit=False
         )
 
-    def crear_sesion(self):
-        """
-        Crea y devuelve una nueva sesión de SQLAlchemy.
-
-        Returns:
-            Session: Nueva sesión asociada al motor de conexión.
-        """
+    def crear_sesion(self) -> Session:
         return self.Session()
 
     @contextmanager
-    def obtener_sesion(self):
-        """
-        Gestiona automáticamente una sesión y su transacción.
+    def obtener_sesion(self) -> Iterator[Session]:
 
-        Confirma los cambios mediante commit si las operaciones
-        finalizan correctamente. Si ocurre un error, ejecuta
-        rollback para revertir la transacción.
-
-        La sesión se cierra siempre al finalizar el bloque.
-
-        Yields:
-            Session: Sesión activa para operar con la base de datos.
-
-        Raises:
-            Exception: Propaga cualquier error ocurrido durante
-                las operaciones de la transacción.
-        """
         sesion = self.crear_sesion()
 
         try:
