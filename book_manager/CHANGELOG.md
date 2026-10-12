@@ -1,3 +1,5 @@
+[Ejercicio 8]
+* Dia 8 Modificación del archivo console.y
 
 [Ejercicio 7]
 * Dia 7 Agregamos al URL:dolarapi.com (API's)  al archivo .env
