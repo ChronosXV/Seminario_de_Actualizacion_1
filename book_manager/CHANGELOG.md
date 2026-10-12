@@ -1,4 +1,7 @@
 
+[Ejercicio 6]
+* Dia 6 Modificaciones en los archivos de configuración.
+
 [Ejercicio 5]
 * Dia 5 migración de datos a sql
 
@@ -13,3 +16,4 @@
 
 [Ejercicio 1]
 * Dia 1 Inicialización y configuración de la herramienta de versionado y armado de estructura de directorio
+
