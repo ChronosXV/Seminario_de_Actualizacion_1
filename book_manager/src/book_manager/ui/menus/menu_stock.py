@@ -28,12 +28,14 @@ class MenuStock:
             opcion = input("Seleccione una opción: ").strip()
 
             if opcion == "1":
-                self.buscar_stock()
+                self.listar_stock()
             elif opcion == "2":
-                self.crear_stock()
+                self.buscar_stock()
             elif opcion == "3":
-                self.modificar_stock()
+                self.crear_stock()
             elif opcion == "4":
+                self.modificar_stock()
+            elif opcion == "5":
                 self.eliminar_stock()
             elif opcion == "0":
                 break
@@ -46,10 +48,11 @@ class MenuStock:
         print("\n" + "=" * 40)
         print("          GESTIÓN DE STOCK")
         print("=" * 40)
-        print("1. Buscar stock por libro")
-        print("2. Crear stock")
-        print("3. Modificar stock")
-        print("4. Eliminar stock")
+        print("1. Listar stock")
+        print("2. Buscar stock por libro")
+        print("3. Crear stock")
+        print("4. Modificar stock")
+        print("5. Eliminar stock")
         print("0. Volver")
         print("=" * 40)
 
@@ -68,6 +71,24 @@ class MenuStock:
             raise ValueError(
                 "La cantidad de stock no puede ser negativa."
             )
+
+    def listar_stock(self) -> None:
+        """Lista todos los registros de stock."""
+
+        print("\n--- LISTADO DE STOCK ---")
+
+        stocks = self.servicio_stock.listar()
+
+        if not stocks:
+            print("\nNo hay registros de stock.")
+            return
+
+        for stock in stocks:
+            print("\n" + "-" * 40)
+            self.mostrar_stock(stock)
+
+        print("\n" + "-" * 40)
+        print(f"Total de registros: {len(stocks)}")
 
     def buscar_stock(self) -> None:
         """Busca el stock correspondiente a un libro."""
