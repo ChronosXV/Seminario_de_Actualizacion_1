@@ -1,6 +1,8 @@
 
 from typing import Callable
 
+from sqlalchemy.exc import IntegrityError
+
 from book_manager.services.services import ServicioBase
 
 
@@ -95,6 +97,13 @@ class MenuCatalogos:
         except ValueError as error:
             print(f"\nError: {error}")
 
+        except IntegrityError:
+            print(
+                "\nNo se pudo crear el registro. "
+                "Verifique que los datos no estén duplicados "
+                "y que las referencias sean válidas."
+            )
+
     def modificar(self) -> None:
         """Modifica una entidad existente."""
 
@@ -113,6 +122,13 @@ class MenuCatalogos:
 
         except ValueError as error:
             print(f"\nError: {error}")
+
+        except IntegrityError:
+            print(
+                "\nNo se pudo modificar el registro. "
+                "La operación incumple una restricción "
+                "de la base de datos."
+            )
 
     def eliminar(self) -> None:
         """Elimina una entidad por ID."""
@@ -135,5 +151,11 @@ class MenuCatalogos:
             else:
                 print("\nOperación cancelada.")
 
-        except ValueError:
-            print("\nEl ID debe ser numérico.")
+        except ValueError as error:
+            print(f"\nError: {error}")
+
+        except IntegrityError:
+            print(
+                "\nNo se pudo eliminar el registro. "
+                "Puede estar relacionado con otros registros."
+            )

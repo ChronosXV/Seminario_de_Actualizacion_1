@@ -1,543 +1,234 @@
 
-import abc
-import csv
-import os
-import tempfile
-from datetime import date
-from pathlib import Path
-from typing import Dict, Generic, List, Optional, TypeVar
+"""
+Repositorios del sistema Book Manager.
 
-from book_manager.entities.entities import (
-    CotizacionDolar,
-    EntidadBase,
-    Stock,
+Implementa las operaciones de persistencia mediante SQLAlchemy,
+utilizando los modelos ORM y el administrador de conexiones.
+"""
+
+from datetime import date
+from typing import Generic, TypeVar
+
+from sqlalchemy import select
+from sqlalchemy.orm import DeclarativeBase, selectinload
+
+from book_manager.database.connection import ConexionDB
+from book_manager.models.models import (
+    CotizacionDolarModel,
+    StockModel,
 )
 
 
-T = TypeVar("T", bound=EntidadBase)
+M = TypeVar("M", bound=DeclarativeBase)
 
 
-# ==========================================================
-# FUNCIONES AUXILIARES PARA PERSISTENCIA CSV
-# ==========================================================
+class Repositorio(Generic[M]):
+    """
+    Repositorio genérico para operaciones CRUD con SQLAlchemy.
 
-def guardar_csv(
-    ruta: Path,
-    columnas: List[str],
-    registros: List[dict],
-) -> None:
-    """Guarda los registros mediante reemplazo atómico del CSV."""
-
-    ruta.parent.mkdir(parents=True, exist_ok=True)
-    temporal = None
-
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            newline="",
-            dir=ruta.parent,
-            suffix=".tmp",
-            delete=False,
-        ) as archivo:
-
-            temporal = Path(archivo.name)
-
-            escritor = csv.DictWriter(
-                archivo,
-                fieldnames=columnas,
-            )
-
-            escritor.writeheader()
-            escritor.writerows(registros)
-
-        os.replace(temporal, ruta)
-
-    finally:
-        if temporal is not None and temporal.exists():
-            temporal.unlink()
-
-
-def convertir_entidad(entidad: EntidadBase) -> dict:
-    """Convierte una entidad en un registro compatible con CSV."""
-
-    registro = {"id": entidad.id}
-
-    for atributo, valor in vars(entidad).items():
-
-        if atributo == "_id":
-            continue
-
-        columna = atributo.lstrip("_")
-
-        if isinstance(valor, EntidadBase):
-            registro[f"{columna}_id"] = valor.id
-
-        elif isinstance(valor, date):
-            registro[columna] = valor.isoformat()
-
-        else:
-            registro[columna] = valor
-
-    return registro
-
-
-# ==========================================================
-# INTERFAZ DEL REPOSITORIO GENÉRICO
-# ==========================================================
-
-class IRepositorio(abc.ABC, Generic[T]):
-    """Interfaz para operaciones CRUD."""
-
-    @abc.abstractmethod
-    def crear(self, entidad: T) -> T:
-        pass
-
-    @abc.abstractmethod
-    def leer_por_id(self, id: int) -> Optional[T]:
-        pass
-
-    @abc.abstractmethod
-    def leer_todos(self) -> List[T]:
-        pass
-
-    @abc.abstractmethod
-    def actualizar(self, entidad: T) -> T:
-        pass
-
-    @abc.abstractmethod
-    def eliminar(self, id: int) -> bool:
-        pass
-
-
-# ==========================================================
-# REPOSITORIO GENÉRICO
-# ==========================================================
-
-class Repositorio(IRepositorio[T]):
-    """Repositorio genérico con persistencia CSV y rollback."""
+    Attributes:
+        conexion (ConexionDB): Administrador de conexiones.
+        modelo (type[M]): Clase del modelo ORM.
+    """
 
     def __init__(
         self,
-        ruta_csv: Optional[str] = None,
+        conexion: ConexionDB,
+        modelo: type[M],
     ) -> None:
+        """Inicializa el repositorio con su conexión y modelo ORM."""
+        self._conexion = conexion
+        self._modelo = modelo
 
-        self._datos: Dict[int, T] = {}
+    def _opciones_relaciones(self):
+        """
+        Prepara la carga anticipada de relaciones del modelo ORM.
 
-        self._ruta_csv = (
-            Path(ruta_csv)
-            if ruta_csv is not None
-            else None
-        )
-
-    def _guardar(self) -> None:
-        """Guarda el estado actual del repositorio en CSV."""
-
-        if self._ruta_csv is None:
-            return
-
-        registros = [
-            convertir_entidad(entidad)
-            for entidad in self._datos.values()
+        Permite acceder a las relaciones después de cerrar
+        la sesión de SQLAlchemy.
+        """
+        return [
+            selectinload(getattr(self._modelo, relacion.key))
+            for relacion in self._modelo.__mapper__.relationships
         ]
 
-        if registros:
-            columnas = list(registros[0].keys())
-
-        else:
-            columnas = ["id"]
-
-            if self._ruta_csv.exists():
-                with self._ruta_csv.open(
-                    encoding="utf-8",
-                    newline="",
-                ) as archivo:
-
-                    columnas = (
-                        csv.DictReader(archivo).fieldnames
-                        or ["id"]
+    def crear(self, entidad: M) -> M:
+        """Inserta un registro en la base de datos."""
+        with self._conexion.obtener_sesion() as sesion:
+            if entidad.id is not None:
+                if sesion.get(self._modelo, entidad.id) is not None:
+                    raise ValueError(
+                        f"Ya existe un registro con ID {entidad.id}."
                     )
 
-        guardar_csv(
-            self._ruta_csv,
-            columnas,
-            registros,
-        )
-
-    def _guardar_con_rollback(self, datos_anteriores) -> None:
-        """Restaura el diccionario si falla la escritura."""
-
-        try:
-            self._guardar()
-
-        except Exception:
-            self._datos = datos_anteriores
-            raise
-
-    def crear(self, entidad: T) -> T:
-
-        if entidad.id in self._datos:
-            raise ValueError(
-                f"Ya existe una entidad con ID {entidad.id}."
-            )
-
-        datos_anteriores = self._datos.copy()
-
-        self._datos[entidad.id] = entidad
-
-        self._guardar_con_rollback(datos_anteriores)
+            sesion.add(entidad)
+            sesion.flush()
+            sesion.refresh(entidad)
 
         return entidad
 
-    def leer_por_id(self, id: int) -> Optional[T]:
-        return self._datos.get(id)
-
-    def leer_todos(self) -> List[T]:
-        return list(self._datos.values())
-
-    def actualizar(self, entidad: T) -> T:
-
-        if entidad.id not in self._datos:
-            raise ValueError(
-                f"No existe una entidad con ID {entidad.id}."
+    def leer_por_id(self, id: int) -> M | None:
+        """Obtiene un registro con sus relaciones cargadas."""
+        with self._conexion.obtener_sesion() as sesion:
+            consulta = (
+                select(self._modelo)
+                .options(*self._opciones_relaciones())
+                .where(self._modelo.id == id)
             )
 
-        datos_anteriores = self._datos.copy()
+            return sesion.scalar(consulta)
 
-        self._datos[entidad.id] = entidad
+    def leer_todos(self) -> list[M]:
+        """Obtiene todos los registros con sus relaciones cargadas."""
+        with self._conexion.obtener_sesion() as sesion:
+            consulta = (
+                select(self._modelo)
+                .options(*self._opciones_relaciones())
+                .order_by(self._modelo.id)
+            )
 
-        self._guardar_con_rollback(datos_anteriores)
+            return list(sesion.scalars(consulta).all())
 
-        return entidad
+    def actualizar(self, entidad: M) -> M:
+        """Actualiza un registro existente."""
+        with self._conexion.obtener_sesion() as sesion:
+            if entidad.id is None:
+                raise ValueError(
+                    "La entidad debe tener un ID para actualizarse."
+                )
+
+            if sesion.get(self._modelo, entidad.id) is None:
+                raise ValueError(
+                    f"No existe un registro con ID {entidad.id}."
+                )
+
+            entidad_actualizada = sesion.merge(entidad)
+            sesion.flush()
+
+            return entidad_actualizada
 
     def eliminar(self, id: int) -> bool:
+        """Elimina un registro por su identificador."""
+        with self._conexion.obtener_sesion() as sesion:
+            entidad = sesion.get(self._modelo, id)
 
-        if id not in self._datos:
-            return False
+            if entidad is None:
+                return False
 
-        datos_anteriores = self._datos.copy()
+            sesion.delete(entidad)
+            sesion.flush()
 
-        del self._datos[id]
-
-        self._guardar_con_rollback(datos_anteriores)
-
-        return True
-
-
-# ==========================================================
-# INTERFAZ DEL REPOSITORIO DE STOCK
-# ==========================================================
-
-class IRepositorioStock(abc.ABC):
-    """Interfaz para administrar registros de stock."""
-
-    @abc.abstractmethod
-    def crear(self, stock: Stock) -> Stock:
-        pass
-
-    @abc.abstractmethod
-    def leer_por_libro(
-        self,
-        libro_id: int,
-    ) -> Optional[Stock]:
-        pass
-
-    @abc.abstractmethod
-    def actualizar(self, stock: Stock) -> Stock:
-        pass
-
-    @abc.abstractmethod
-    def eliminar(self, libro_id: int) -> bool:
-        pass
+            return True
 
 
-# ==========================================================
-# REPOSITORIO DE STOCK
-# ==========================================================
+class RepositorioStock(Repositorio[StockModel]):
+    """
+    Repositorio especializado en la gestión de stock.
 
-class RepositorioStock(IRepositorioStock):
-    """Repositorio de stock con persistencia CSV y rollback."""
+    Permite consultar y administrar las existencias
+    utilizando el identificador del libro.
+    """
 
-    def __init__(
-        self,
-        ruta_csv: Optional[str] = None,
-    ) -> None:
+    def __init__(self, conexion: ConexionDB) -> None:
+        """Inicializa el repositorio con el modelo de stock."""
+        super().__init__(conexion, StockModel)
 
-        self._datos: Dict[int, Stock] = {}
-
-        self._ruta_csv = (
-            Path(ruta_csv)
-            if ruta_csv is not None
-            else None
-        )
-
-    def _guardar(self) -> None:
-        """Guarda los registros de stock en CSV."""
-
-        if self._ruta_csv is None:
-            return
-
-        registros = [
-            convertir_entidad(stock)
-            for stock in self._datos.values()
-        ]
-
-        guardar_csv(
-            self._ruta_csv,
-            ["id", "libro_id", "cantidad"],
-            registros,
-        )
-
-    def _guardar_con_rollback(self, datos_anteriores) -> None:
-        """Restaura los datos si falla la escritura."""
-
-        try:
-            self._guardar()
-
-        except Exception:
-            self._datos = datos_anteriores
-            raise
-
-    def crear(self, stock: Stock) -> Stock:
-
-        libro_id = stock.libro.id
-
-        if libro_id in self._datos:
-            raise ValueError(
-                f"Ya existe stock para el libro {libro_id}."
+    def leer_por_libro(self, libro_id: int) -> StockModel | None:
+        """Obtiene el stock correspondiente a un libro."""
+        with self._conexion.obtener_sesion() as sesion:
+            consulta = (
+                select(StockModel)
+                .options(*self._opciones_relaciones())
+                .where(StockModel.libro_id == libro_id)
             )
 
-        datos_anteriores = self._datos.copy()
+            return sesion.scalar(consulta)
 
-        self._datos[libro_id] = stock
-
-        self._guardar_con_rollback(datos_anteriores)
-
-        return stock
-
-    def leer_por_libro(
-        self,
-        libro_id: int,
-    ) -> Optional[Stock]:
-
-        return self._datos.get(libro_id)
-
-    def actualizar(self, stock: Stock) -> Stock:
-
-        libro_id = stock.libro.id
-
-        if libro_id not in self._datos:
-            raise ValueError(
-                f"No existe stock para el libro {libro_id}."
+    def eliminar_por_libro(self, libro_id: int) -> bool:
+        """Elimina el registro de stock correspondiente a un libro."""
+        with self._conexion.obtener_sesion() as sesion:
+            consulta = select(StockModel).where(
+                StockModel.libro_id == libro_id
             )
 
-        datos_anteriores = self._datos.copy()
+            stock = sesion.scalar(consulta)
 
-        self._datos[libro_id] = stock
+            if stock is None:
+                return False
 
-        self._guardar_con_rollback(datos_anteriores)
+            sesion.delete(stock)
+            sesion.flush()
 
-        return stock
+            return True
 
-    def eliminar(self, libro_id: int) -> bool:
-
-        if libro_id not in self._datos:
-            return False
-
-        datos_anteriores = self._datos.copy()
-
-        del self._datos[libro_id]
-
-        self._guardar_con_rollback(datos_anteriores)
-
-        return True
-
-
-# ==========================================================
-# INTERFAZ DEL REPOSITORIO DE COTIZACIONES
-# ==========================================================
-
-class IRepositorioCotizacionDolar(abc.ABC):
-    """Interfaz para administrar cotizaciones."""
-
-    @abc.abstractmethod
-    def crear(
-        self,
-        cotizacion: CotizacionDolar,
-    ) -> CotizacionDolar:
-        pass
-
-    @abc.abstractmethod
-    def leer_por_tipo_y_fecha(
-        self,
-        tipo_id: int,
-        fecha: date,
-    ) -> Optional[CotizacionDolar]:
-        pass
-
-    @abc.abstractmethod
-    def leer_historico_por_tipo(
-        self,
-        tipo_id: int,
-    ) -> List[CotizacionDolar]:
-        pass
-
-    @abc.abstractmethod
-    def actualizar(
-        self,
-        cotizacion: CotizacionDolar,
-    ) -> CotizacionDolar:
-        pass
-
-    @abc.abstractmethod
-    def eliminar(
-        self,
-        tipo_id: int,
-        fecha: date,
-    ) -> bool:
-        pass
-
-
-# ==========================================================
-# REPOSITORIO DE COTIZACIONES
-# ==========================================================
 
 class RepositorioCotizacionDolar(
-    IRepositorioCotizacionDolar
+    Repositorio[CotizacionDolarModel]
 ):
-    """Repositorio de cotizaciones con persistencia CSV y rollback."""
+    """
+    Repositorio especializado en cotizaciones del dólar.
 
-    def __init__(
-        self,
-        ruta_csv: Optional[str] = None,
-    ) -> None:
+    Permite consultar cotizaciones por tipo y fecha,
+    además de recuperar su historial.
+    """
 
-        self._datos: Dict[
-            tuple[int, date],
-            CotizacionDolar,
-        ] = {}
-
-        self._ruta_csv = (
-            Path(ruta_csv)
-            if ruta_csv is not None
-            else None
-        )
-
-    def _guardar(self) -> None:
-        """Guarda las cotizaciones en CSV."""
-
-        if self._ruta_csv is None:
-            return
-
-        registros = [
-            convertir_entidad(cotizacion)
-            for cotizacion in self._datos.values()
-        ]
-
-        guardar_csv(
-            self._ruta_csv,
-            [
-                "id",
-                "tipo_cotizacion_id",
-                "moneda_id",
-                "fecha",
-                "valor_compra",
-                "valor_venta",
-            ],
-            registros,
-        )
-
-    def _guardar_con_rollback(self, datos_anteriores) -> None:
-        """Restaura los datos si falla la escritura."""
-
-        try:
-            self._guardar()
-
-        except Exception:
-            self._datos = datos_anteriores
-            raise
-
-    def crear(
-        self,
-        cotizacion: CotizacionDolar,
-    ) -> CotizacionDolar:
-
-        clave = (
-            cotizacion.tipo_cotizacion.id,
-            cotizacion.fecha,
-        )
-
-        if clave in self._datos:
-            raise ValueError(
-                "Ya existe una cotización para ese tipo y fecha."
-            )
-
-        datos_anteriores = self._datos.copy()
-
-        self._datos[clave] = cotizacion
-
-        self._guardar_con_rollback(datos_anteriores)
-
-        return cotizacion
+    def __init__(self, conexion: ConexionDB) -> None:
+        """Inicializa el repositorio con el modelo de cotizaciones."""
+        super().__init__(conexion, CotizacionDolarModel)
 
     def leer_por_tipo_y_fecha(
         self,
         tipo_id: int,
         fecha: date,
-    ) -> Optional[CotizacionDolar]:
+    ) -> CotizacionDolarModel | None:
+        """Obtiene una cotización por tipo y fecha."""
+        with self._conexion.obtener_sesion() as sesion:
+            consulta = (
+                select(CotizacionDolarModel)
+                .options(*self._opciones_relaciones())
+                .where(
+                    CotizacionDolarModel.tipo_cotizacion_id == tipo_id,
+                    CotizacionDolarModel.fecha == fecha,
+                )
+            )
 
-        return self._datos.get((tipo_id, fecha))
+            return sesion.scalar(consulta)
 
     def leer_historico_por_tipo(
         self,
         tipo_id: int,
-    ) -> List[CotizacionDolar]:
-
-        return [
-            cotizacion
-            for (id_tipo, _), cotizacion
-            in self._datos.items()
-            if id_tipo == tipo_id
-        ]
-
-    def actualizar(
-        self,
-        cotizacion: CotizacionDolar,
-    ) -> CotizacionDolar:
-
-        clave = (
-            cotizacion.tipo_cotizacion.id,
-            cotizacion.fecha,
-        )
-
-        if clave not in self._datos:
-            raise ValueError(
-                "No existe la cotización que se quiere actualizar."
+    ) -> list[CotizacionDolarModel]:
+        """Obtiene el historial de cotizaciones de un tipo."""
+        with self._conexion.obtener_sesion() as sesion:
+            consulta = (
+                select(CotizacionDolarModel)
+                .options(*self._opciones_relaciones())
+                .where(
+                    CotizacionDolarModel.tipo_cotizacion_id == tipo_id
+                )
+                .order_by(CotizacionDolarModel.fecha)
             )
 
-        datos_anteriores = self._datos.copy()
+            return list(sesion.scalars(consulta).all())
 
-        self._datos[clave] = cotizacion
-
-        self._guardar_con_rollback(datos_anteriores)
-
-        return cotizacion
-
-    def eliminar(
+    def eliminar_por_tipo_y_fecha(
         self,
         tipo_id: int,
         fecha: date,
     ) -> bool:
+        """Elimina una cotización identificada por tipo y fecha."""
+        with self._conexion.obtener_sesion() as sesion:
+            consulta = select(CotizacionDolarModel).where(
+                CotizacionDolarModel.tipo_cotizacion_id == tipo_id,
+                CotizacionDolarModel.fecha == fecha,
+            )
 
-        clave = (tipo_id, fecha)
+            cotizacion = sesion.scalar(consulta)
 
-        if clave not in self._datos:
-            return False
+            if cotizacion is None:
+                return False
 
-        datos_anteriores = self._datos.copy()
+            sesion.delete(cotizacion)
+            sesion.flush()
 
-        del self._datos[clave]
-
-        self._guardar_con_rollback(datos_anteriores)
-
-        return True
+            return True

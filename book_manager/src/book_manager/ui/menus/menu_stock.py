@@ -1,5 +1,11 @@
 
-from book_manager.entities.entities import Stock
+"""
+Interfaz de consola para la gestión de stock con SQLAlchemy.
+"""
+
+from sqlalchemy.exc import IntegrityError
+
+from book_manager.models.models import StockModel
 from book_manager.services.services import ServicioBase, ServicioStock
 
 
@@ -12,16 +18,13 @@ class MenuStock:
         servicio_libros: ServicioBase,
     ) -> None:
         """Inicializa los servicios necesarios para gestionar stock."""
-
         self.servicio_stock = servicio_stock
         self.servicio_libros = servicio_libros
 
     def ejecutar(self) -> None:
         """Ejecuta el menú de gestión de stock."""
-
         while True:
             self.mostrar_menu()
-
             opcion = input("Seleccione una opción: ").strip()
 
             if opcion == "1":
@@ -40,7 +43,6 @@ class MenuStock:
     @staticmethod
     def mostrar_menu() -> None:
         """Muestra las opciones de gestión de stock."""
-
         print("\n" + "=" * 40)
         print("          GESTIÓN DE STOCK")
         print("=" * 40)
@@ -51,12 +53,26 @@ class MenuStock:
         print("0. Volver")
         print("=" * 40)
 
+    @staticmethod
+    def mostrar_stock(stock: StockModel) -> None:
+        """Muestra los datos del stock y del libro relacionado."""
+        print(f"Stock ID: {stock.id}")
+        print(f"Libro ID: {stock.libro_id}")
+        print(f"Título: {stock.libro.titulo}")
+        print(f"Cantidad: {stock.cantidad}")
+
+    @staticmethod
+    def validar_cantidad(cantidad: int) -> None:
+        """Verifica que la cantidad de stock no sea negativa."""
+        if cantidad < 0:
+            raise ValueError(
+                "La cantidad de stock no puede ser negativa."
+            )
+
     def buscar_stock(self) -> None:
         """Busca el stock correspondiente a un libro."""
-
         try:
             libro_id = int(input("Ingrese el ID del libro: "))
-
             stock = self.servicio_stock.obtener_por_libro(libro_id)
 
             if stock is None:
@@ -64,23 +80,21 @@ class MenuStock:
                 return
 
             print("\n--- STOCK ENCONTRADO ---")
-            print(f"Stock ID: {stock.id}")
-            print(f"Libro ID: {stock.libro.id}")
-            print(f"Título: {stock.libro.titulo}")
-            print(f"Cantidad: {stock.cantidad}")
+            self.mostrar_stock(stock)
 
-        except ValueError:
-            print("\nEl ID debe ser un número entero.")
+        except ValueError as error:
+            print(f"\nError: {error}")
 
     def crear_stock(self) -> None:
         """Crea un registro de stock para un libro."""
-
         try:
             print("\n--- CREAR STOCK ---")
 
             stock_id = int(input("ID del stock: "))
             libro_id = int(input("ID del libro: "))
             cantidad = int(input("Cantidad: "))
+
+            self.validar_cantidad(cantidad)
 
             libro = self.servicio_libros.obtener_por_id(libro_id)
 
@@ -92,22 +106,20 @@ class MenuStock:
                 print("\nEl libro ya tiene un registro de stock.")
                 return
 
-            stock = Stock(
+            stock = StockModel(
                 id=stock_id,
-                libro=libro,
+                libro_id=libro_id,
                 cantidad=cantidad,
             )
 
             self.servicio_stock.crear(stock)
-
             print("\nStock creado correctamente.")
 
-        except ValueError as error:
-            print(f"\nError: {error}")
+        except (ValueError, IntegrityError) as error:
+            print(f"\nError al crear el stock: {error}")
 
     def modificar_stock(self) -> None:
-        """Modifica el stock de un libro."""
-
+        """Modifica la cantidad de stock de un libro."""
         try:
             print("\n--- MODIFICAR STOCK ---")
 
@@ -125,23 +137,22 @@ class MenuStock:
             print(f"Cantidad actual: {stock_actual.cantidad}")
 
             cantidad = int(input("Nueva cantidad: "))
+            self.validar_cantidad(cantidad)
 
-            stock_modificado = Stock(
+            stock_modificado = StockModel(
                 id=stock_actual.id,
-                libro=stock_actual.libro,
+                libro_id=stock_actual.libro_id,
                 cantidad=cantidad,
             )
 
             self.servicio_stock.actualizar(stock_modificado)
-
             print("\nStock modificado correctamente.")
 
-        except ValueError as error:
-            print(f"\nError: {error}")
+        except (ValueError, IntegrityError) as error:
+            print(f"\nError al modificar el stock: {error}")
 
     def eliminar_stock(self) -> None:
         """Elimina el stock correspondiente a un libro."""
-
         try:
             print("\n--- ELIMINAR STOCK ---")
 
@@ -164,9 +175,12 @@ class MenuStock:
                 print("\nEliminación cancelada.")
                 return
 
-            self.servicio_stock.eliminar(libro_id)
+            eliminado = self.servicio_stock.eliminar(libro_id)
 
-            print("\nStock eliminado correctamente.")
+            if eliminado:
+                print("\nStock eliminado correctamente.")
+            else:
+                print("\nNo se encontró stock para eliminar.")
 
-        except ValueError as error:
-            print(f"\nError: {error}")
+        except (ValueError, IntegrityError) as error:
+            print(f"\nError al eliminar el stock: {error}")

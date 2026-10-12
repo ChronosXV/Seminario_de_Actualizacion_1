@@ -1,332 +1,395 @@
+"""
+Menú de gestión de cotizaciones del dólar.
 
-from datetime import datetime
+Permite consultar, crear, modificar y eliminar cotizaciones
+utilizando los servicios y modelos SQLAlchemy.
+"""
 
-from book_manager.entities.entities import CotizacionDolar
-from book_manager.services.services import (
-    ServicioBase,
-    ServicioCotizacionDolar,
-)
+from datetime import date
+from decimal import Decimal, InvalidOperation
+
+from sqlalchemy.exc import IntegrityError
+
+from book_manager.models.models import CotizacionDolarModel
 
 
 class MenuCotizaciones:
-    """Interfaz de consola para la gestión de cotizaciones."""
+    """Interfaz de consola para gestionar cotizaciones."""
 
     def __init__(
         self,
-        servicio_cotizaciones: ServicioCotizacionDolar,
-        servicio_tipos_cotizacion: ServicioBase,
-        servicio_monedas: ServicioBase,
+        servicio_cotizaciones,
+        servicio_tipos_cotizacion,
+        servicio_monedas,
     ) -> None:
-        """Inicializa los servicios necesarios."""
-
-        self.servicio_cotizaciones = servicio_cotizaciones
+        """Inicializa el menú con sus servicios."""
+        self.servicio = servicio_cotizaciones
         self.servicio_tipos_cotizacion = servicio_tipos_cotizacion
         self.servicio_monedas = servicio_monedas
 
+    @staticmethod
+    def leer_id(mensaje: str) -> int:
+        """Solicita un identificador positivo."""
+        try:
+            identificador = int(input(mensaje))
+        except ValueError as error:
+            raise ValueError("El ID debe ser numérico.") from error
+
+        if identificador <= 0:
+            raise ValueError("El ID debe ser mayor que cero.")
+
+        return identificador
+
+    @staticmethod
+    def leer_fecha(mensaje: str) -> date:
+        """Solicita una fecha en formato AAAA-MM-DD."""
+        try:
+            return date.fromisoformat(input(mensaje).strip())
+        except ValueError as error:
+            raise ValueError(
+                "La fecha debe tener formato AAAA-MM-DD."
+            ) from error
+
+    @staticmethod
+    def validar_decimal(valor: str) -> Decimal:
+        """Valida un importe positivo con hasta dos decimales."""
+        try:
+            numero = Decimal(valor.strip().replace(",", "."))
+        except (InvalidOperation, AttributeError) as error:
+            raise ValueError(
+                "El importe debe ser numérico."
+            ) from error
+
+        if not numero.is_finite() or numero <= 0:
+            raise ValueError(
+                "El importe debe ser mayor que cero."
+            )
+
+        if numero.as_tuple().exponent < -2:
+            raise ValueError(
+                "El importe puede tener como máximo dos decimales."
+            )
+
+        if numero > Decimal("9999999999999.99"):
+            raise ValueError(
+                "El importe supera el máximo permitido."
+            )
+
+        return numero
+
+    @staticmethod
+    def validar_valores(
+        valor_compra: Decimal,
+        valor_venta: Decimal,
+    ) -> None:
+        """Valida la coherencia de los valores de cotización."""
+        if valor_compra <= 0 or valor_venta <= 0:
+            raise ValueError(
+                "Los valores deben ser mayores que cero."
+            )
+
+        if valor_compra > valor_venta:
+            raise ValueError(
+                "El valor de compra no puede superar al de venta."
+            )
+
+    def validar_referencias(
+        self,
+        tipo_id: int,
+        moneda_id: int,
+    ) -> None:
+        """Comprueba que el tipo de cotización y la moneda existan."""
+        tipo = self.servicio_tipos_cotizacion.obtener_por_id(
+            tipo_id
+        )
+
+        if tipo is None:
+            raise ValueError(
+                "El tipo de cotización no existe."
+            )
+
+        moneda = self.servicio_monedas.obtener_por_id(
+            moneda_id
+        )
+
+        if moneda is None:
+            raise ValueError(
+                "La moneda no existe."
+            )
+
     def ejecutar(self) -> None:
         """Ejecuta el menú de gestión de cotizaciones."""
+        opciones = {
+            "1": self.listar,
+            "2": self.buscar,
+            "3": self.crear,
+            "4": self.modificar,
+            "5": self.eliminar,
+        }
 
         while True:
-            self.mostrar_menu()
+            print("\n--- GESTIÓN DE COTIZACIONES ---")
+            print("1. Listar historial por tipo")
+            print("2. Buscar por tipo y fecha")
+            print("3. Crear cotización")
+            print("4. Modificar cotización")
+            print("5. Eliminar cotización")
+            print("0. Volver")
 
-            opcion = input("Seleccione una opción: ").strip()
+            opcion = input(
+                "Seleccione una opción: "
+            ).strip()
 
-            if opcion == "1":
-                self.buscar_cotizacion()
-            elif opcion == "2":
-                self.ver_historico()
-            elif opcion == "3":
-                self.crear_cotizacion()
-            elif opcion == "4":
-                self.modificar_cotizacion()
-            elif opcion == "5":
-                self.eliminar_cotizacion()
-            elif opcion == "0":
-                break
-            else:
-                print("\nOpción inválida. Intente nuevamente.")
+            if opcion == "0":
+                return
 
-    @staticmethod
-    def mostrar_menu() -> None:
-        """Muestra las opciones de gestión de cotizaciones."""
+            accion = opciones.get(opcion)
 
-        print("\n" + "=" * 40)
-        print("       GESTIÓN DE COTIZACIONES")
-        print("=" * 40)
-        print("1. Buscar cotización")
-        print("2. Ver histórico por tipo")
-        print("3. Crear cotización")
-        print("4. Modificar cotización")
-        print("5. Eliminar cotización")
-        print("0. Volver")
-        print("=" * 40)
+            if accion is None:
+                print("\nOpción inválida.")
+                continue
 
-    @staticmethod
-    def leer_fecha():
-        """Solicita una fecha con formato AAAA-MM-DD."""
+            try:
+                accion()
 
-        fecha_texto = input("Fecha (AAAA-MM-DD): ").strip()
+            except ValueError as error:
+                print(f"\nDatos inválidos: {error}")
 
-        return datetime.strptime(
-            fecha_texto,
-            "%Y-%m-%d",
-        ).date()
+            except IntegrityError:
+                print(
+                    "\nNo se pudo completar la operación. "
+                    "Verificá que no exista una cotización "
+                    "duplicada y que las referencias sean válidas."
+                )
 
-    def buscar_cotizacion(self) -> None:
+    def listar(self) -> None:
+        """Lista el historial de cotizaciones de un tipo."""
+        tipos = self.servicio_tipos_cotizacion.obtener_todos()
+
+        if not tipos:
+            print("\nNo hay tipos de cotización registrados.")
+            return
+
+        print("\n--- TIPOS DE COTIZACIÓN ---")
+
+        for tipo in tipos:
+            print(f"{tipo.id}. {tipo.nombre}")
+
+        tipo_id = self.leer_id(
+            "\nID del tipo de cotización: "
+        )
+
+        tipo = self.servicio_tipos_cotizacion.obtener_por_id(
+            tipo_id
+        )
+
+        if tipo is None:
+            print("\nTipo de cotización inexistente.")
+            return
+
+        cotizaciones = self.servicio.obtener_historico(
+            tipo_id
+        )
+
+        if not cotizaciones:
+            print("\nNo hay cotizaciones registradas.")
+            return
+
+        print(f"\n--- HISTORIAL: {tipo.nombre} ---")
+
+        for cotizacion in cotizaciones:
+            self.mostrar_cotizacion(cotizacion)
+
+    def buscar(self) -> None:
         """Busca una cotización por tipo y fecha."""
+        tipo_id = self.leer_id(
+            "ID del tipo de cotización: "
+        )
 
-        try:
-            tipo_id = int(
-                input("ID del tipo de cotización: ")
+        fecha = self.leer_fecha(
+            "Fecha (AAAA-MM-DD): "
+        )
+
+        cotizacion = self.servicio.obtener_por_tipo_y_fecha(
+            tipo_id,
+            fecha,
+        )
+
+        if cotizacion is None:
+            print("\nCotización no encontrada.")
+            return
+
+        self.mostrar_cotizacion(cotizacion)
+
+    def crear(self) -> None:
+        """Registra una nueva cotización."""
+        print("\n--- NUEVA COTIZACIÓN ---")
+
+        tipo_id = self.leer_id(
+            "ID del tipo de cotización: "
+        )
+
+        moneda_id = self.leer_id(
+            "ID de la moneda: "
+        )
+
+        self.validar_referencias(
+            tipo_id,
+            moneda_id,
+        )
+
+        fecha = self.leer_fecha(
+            "Fecha (AAAA-MM-DD): "
+        )
+
+        valor_compra = self.validar_decimal(
+            input("Valor compra: ")
+        )
+
+        valor_venta = self.validar_decimal(
+            input("Valor venta: ")
+        )
+
+        self.validar_valores(
+            valor_compra,
+            valor_venta,
+        )
+
+        existente = self.servicio.obtener_por_tipo_y_fecha(
+            tipo_id,
+            fecha,
+        )
+
+        if existente is not None:
+            print(
+                "\nYa existe una cotización para "
+                "ese tipo y fecha."
             )
-            fecha = self.leer_fecha()
+            return
 
-            cotizacion = (
-                self.servicio_cotizaciones.obtener_por_tipo_y_fecha(
-                    tipo_id,
-                    fecha,
-                )
-            )
+        cotizacion = CotizacionDolarModel(
+            tipo_cotizacion_id=tipo_id,
+            moneda_id=moneda_id,
+            fecha=fecha,
+            valor_compra=valor_compra,
+            valor_venta=valor_venta,
+        )
 
-            if cotizacion is None:
-                print("\nCotización no encontrada.")
-                return
+        self.servicio.crear(cotizacion)
 
-            self.mostrar_cotizacion(cotizacion)
+        print("\nCotización creada correctamente.")
 
-        except ValueError:
-            print("\nDatos inválidos. Verifique ID y fecha.")
-
-    def ver_historico(self) -> None:
-        """Muestra el histórico de un tipo de cotización."""
-
-        try:
-            tipo_id = int(
-                input("ID del tipo de cotización: ")
-            )
-
-            cotizaciones = (
-                self.servicio_cotizaciones.obtener_historico(
-                    tipo_id
-                )
-            )
-
-            if not cotizaciones:
-                print(
-                    "\nNo hay cotizaciones para ese tipo."
-                )
-                return
-
-            print("\n--- HISTÓRICO DE COTIZACIONES ---")
-
-            for cotizacion in cotizaciones:
-                print(
-                    f"Fecha: {cotizacion.fecha} | "
-                    f"Tipo: "
-                    f"{cotizacion.tipo_cotizacion.nombre} | "
-                    f"Compra: {cotizacion.valor_compra:.2f} | "
-                    f"Venta: {cotizacion.valor_venta:.2f}"
-                )
-
-        except ValueError:
-            print("\nEl ID debe ser un número entero.")
-
-    def crear_cotizacion(self) -> None:
-        """Crea una nueva cotización."""
-
-        try:
-            print("\n--- CREAR COTIZACIÓN ---")
-
-            cotizacion_id = int(input("ID: "))
-            tipo_id = int(
-                input("ID del tipo de cotización: ")
-            )
-            moneda_id = int(input("ID de la moneda: "))
-            fecha = self.leer_fecha()
-            valor_compra = float(
-                input("Valor de compra: ")
-            )
-            valor_venta = float(
-                input("Valor de venta: ")
-            )
-
-            tipo_cotizacion = (
-                self.servicio_tipos_cotizacion.obtener_por_id(
-                    tipo_id
-                )
-            )
-
-            moneda = self.servicio_monedas.obtener_por_id(
-                moneda_id
-            )
-
-            if tipo_cotizacion is None:
-                print(
-                    "\nEl tipo de cotización no existe."
-                )
-                return
-
-            if moneda is None:
-                print("\nLa moneda indicada no existe.")
-                return
-
-            cotizacion = CotizacionDolar(
-                id=cotizacion_id,
-                tipo_cotizacion=tipo_cotizacion,
-                moneda=moneda,
-                fecha=fecha,
-                valor_compra=valor_compra,
-                valor_venta=valor_venta,
-            )
-
-            self.servicio_cotizaciones.crear(
-                cotizacion
-            )
-
-            print("\nCotización creada correctamente.")
-
-        except ValueError as error:
-            print(f"\nError: {error}")
-
-    def modificar_cotizacion(self) -> None:
+    def modificar(self) -> None:
         """Modifica una cotización existente."""
+        print("\n--- MODIFICAR COTIZACIÓN ---")
 
-        try:
-            print("\n--- MODIFICAR COTIZACIÓN ---")
+        tipo_id = self.leer_id(
+            "ID del tipo de cotización: "
+        )
 
-            tipo_id = int(
-                input("ID del tipo de cotización: ")
-            )
-            fecha = self.leer_fecha()
+        fecha = self.leer_fecha(
+            "Fecha (AAAA-MM-DD): "
+        )
 
-            cotizacion_actual = (
-                self.servicio_cotizaciones.obtener_por_tipo_y_fecha(
-                    tipo_id,
-                    fecha,
-                )
-            )
+        cotizacion = self.servicio.obtener_por_tipo_y_fecha(
+            tipo_id,
+            fecha,
+        )
 
-            if cotizacion_actual is None:
-                print("\nCotización no encontrada.")
-                return
+        if cotizacion is None:
+            print("\nCotización no encontrada.")
+            return
 
-            print(
-                f"Compra actual: "
-                f"{cotizacion_actual.valor_compra:.2f}"
-            )
-            print(
-                f"Venta actual: "
-                f"{cotizacion_actual.valor_venta:.2f}"
-            )
+        self.mostrar_cotizacion(cotizacion)
 
-            compra_texto = input(
-                "Nuevo valor de compra "
-                "(Enter para mantener): "
-            ).strip()
+        moneda_id = self.leer_id(
+            "\nNuevo ID de moneda: "
+        )
 
-            venta_texto = input(
-                "Nuevo valor de venta "
-                "(Enter para mantener): "
-            ).strip()
+        self.validar_referencias(
+            tipo_id,
+            moneda_id,
+        )
 
-            if compra_texto:
-                valor_compra = float(compra_texto)
-            else:
-                valor_compra = (
-                    cotizacion_actual.valor_compra
-                )
+        valor_compra = self.validar_decimal(
+            input("Nuevo valor compra: ")
+        )
 
-            if venta_texto:
-                valor_venta = float(venta_texto)
-            else:
-                valor_venta = (
-                    cotizacion_actual.valor_venta
-                )
+        valor_venta = self.validar_decimal(
+            input("Nuevo valor venta: ")
+        )
 
-            cotizacion_modificada = CotizacionDolar(
-                id=cotizacion_actual.id,
-                tipo_cotizacion=(
-                    cotizacion_actual.tipo_cotizacion
-                ),
-                moneda=cotizacion_actual.moneda,
-                fecha=cotizacion_actual.fecha,
-                valor_compra=valor_compra,
-                valor_venta=valor_venta,
-            )
+        self.validar_valores(
+            valor_compra,
+            valor_venta,
+        )
 
-            self.servicio_cotizaciones.actualizar(
-                cotizacion_modificada
-            )
+        cotizacion.moneda_id = moneda_id
+        cotizacion.valor_compra = valor_compra
+        cotizacion.valor_venta = valor_venta
 
-            print(
-                "\nCotización modificada correctamente."
-            )
+        self.servicio.actualizar(cotizacion)
 
-        except ValueError as error:
-            print(f"\nError: {error}")
+        print("\nCotización modificada correctamente.")
 
-    def eliminar_cotizacion(self) -> None:
+    def eliminar(self) -> None:
         """Elimina una cotización por tipo y fecha."""
+        print("\n--- ELIMINAR COTIZACIÓN ---")
 
-        try:
-            print("\n--- ELIMINAR COTIZACIÓN ---")
+        tipo_id = self.leer_id(
+            "ID del tipo de cotización: "
+        )
 
-            tipo_id = int(
-                input("ID del tipo de cotización: ")
-            )
-            fecha = self.leer_fecha()
+        fecha = self.leer_fecha(
+            "Fecha (AAAA-MM-DD): "
+        )
 
-            cotizacion = (
-                self.servicio_cotizaciones.obtener_por_tipo_y_fecha(
-                    tipo_id,
-                    fecha,
-                )
-            )
+        cotizacion = self.servicio.obtener_por_tipo_y_fecha(
+            tipo_id,
+            fecha,
+        )
 
-            if cotizacion is None:
-                print("\nCotización no encontrada.")
-                return
+        if cotizacion is None:
+            print("\nCotización no encontrada.")
+            return
 
-            self.mostrar_cotizacion(cotizacion)
+        self.mostrar_cotizacion(cotizacion)
 
-            confirmacion = input(
-                "\n¿Confirma la eliminación? (s/n): "
-            ).strip().lower()
+        confirmacion = input(
+            "\n¿Confirmar eliminación? (s/n): "
+        ).strip().lower()
 
-            if confirmacion != "s":
-                print("\nEliminación cancelada.")
-                return
+        if confirmacion != "s":
+            print("\nOperación cancelada.")
+            return
 
-            self.servicio_cotizaciones.eliminar(
-                tipo_id,
-                fecha,
-            )
+        eliminado = self.servicio.eliminar(
+            tipo_id,
+            fecha,
+        )
 
-            print(
-                "\nCotización eliminada correctamente."
-            )
-
-        except ValueError:
-            print(
-                "\nDatos inválidos. Verifique ID y fecha."
-            )
+        if eliminado:
+            print("\nCotización eliminada correctamente.")
+        else:
+            print("\nNo se pudo eliminar la cotización.")
 
     @staticmethod
-    def mostrar_cotizacion(cotizacion) -> None:
+    def mostrar_cotizacion(
+        cotizacion: CotizacionDolarModel,
+    ) -> None:
         """Muestra los datos de una cotización."""
-
         print("\n--- COTIZACIÓN ---")
         print(f"ID: {cotizacion.id}")
         print(
             f"Tipo: {cotizacion.tipo_cotizacion.nombre}"
         )
-        print(f"Moneda: {cotizacion.moneda.nombre}")
+        print(
+            f"Moneda: {cotizacion.moneda.nombre}"
+        )
         print(f"Fecha: {cotizacion.fecha}")
         print(
-            f"Valor compra: "
-            f"{cotizacion.valor_compra:.2f}"
+            f"Valor compra: {cotizacion.valor_compra:.2f}"
         )
         print(
-            f"Valor venta: "
-            f"{cotizacion.valor_venta:.2f}"
+            f"Valor venta: {cotizacion.valor_venta:.2f}"
         )

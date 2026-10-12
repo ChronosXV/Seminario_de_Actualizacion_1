@@ -1,9 +1,14 @@
 
-from book_manager.entities.entities import (
-    Editorial,
-    Genero,
-    Moneda,
-    TipoCotizacion,
+"""
+Funciones de creación, visualización y modificación
+de los catálogos del sistema Book Manager.
+"""
+
+from book_manager.models.models import (
+    EditorialModel,
+    GeneroModel,
+    MonedaModel,
+    TipoCotizacionModel,
 )
 
 
@@ -11,87 +16,62 @@ from book_manager.entities.entities import (
 # GÉNEROS
 # =========================================================
 
-def crear_genero() -> Genero:
-    """Solicita los datos necesarios para crear un género."""
-
+def crear_genero() -> GeneroModel:
+    """Solicita los datos para crear un género."""
     genero_id = int(input("ID: "))
     nombre = input("Nombre: ").strip()
 
-    return Genero(
-        id=genero_id,
-        nombre=nombre,
-    )
+    return GeneroModel(id=genero_id, nombre=nombre)
 
 
-def mostrar_genero(genero: Genero) -> None:
+def mostrar_genero(genero: GeneroModel) -> None:
     """Muestra los datos de un género."""
-
-    print(
-        f"ID: {genero.id} | "
-        f"Nombre: {genero.nombre}"
-    )
+    print(f"ID: {genero.id} | Nombre: {genero.nombre}")
 
 
-def modificar_genero(genero: Genero) -> Genero:
+def modificar_genero(genero: GeneroModel) -> GeneroModel:
     """Solicita los nuevos datos de un género."""
-
     nombre = input("Nuevo nombre: ").strip()
 
-    return Genero(
-        id=genero.id,
-        nombre=nombre,
-    )
+    return GeneroModel(id=genero.id, nombre=nombre)
 
 
 # =========================================================
 # EDITORIALES
 # =========================================================
 
-def crear_editorial() -> Editorial:
-    """Solicita los datos necesarios para crear una editorial."""
-
+def crear_editorial() -> EditorialModel:
+    """Solicita los datos para crear una editorial."""
     editorial_id = int(input("ID: "))
     nombre = input("Nombre: ").strip()
 
-    return Editorial(
-        id=editorial_id,
-        nombre=nombre,
-    )
+    return EditorialModel(id=editorial_id, nombre=nombre)
 
 
-def mostrar_editorial(editorial: Editorial) -> None:
+def mostrar_editorial(editorial: EditorialModel) -> None:
     """Muestra los datos de una editorial."""
-
-    print(
-        f"ID: {editorial.id} | "
-        f"Nombre: {editorial.nombre}"
-    )
+    print(f"ID: {editorial.id} | Nombre: {editorial.nombre}")
 
 
-def modificar_editorial(editorial: Editorial) -> Editorial:
+def modificar_editorial(editorial: EditorialModel) -> EditorialModel:
     """Solicita los nuevos datos de una editorial."""
-
     nombre = input("Nuevo nombre: ").strip()
 
-    return Editorial(
-        id=editorial.id,
-        nombre=nombre,
-    )
+    return EditorialModel(id=editorial.id, nombre=nombre)
 
 
 # =========================================================
 # MONEDAS
 # =========================================================
 
-def crear_moneda() -> Moneda:
-    """Solicita los datos necesarios para crear una moneda."""
-
+def crear_moneda() -> MonedaModel:
+    """Solicita los datos para crear una moneda."""
     moneda_id = int(input("ID: "))
     codigo = input("Código: ").strip()
     nombre = input("Nombre: ").strip()
     simbolo = input("Símbolo: ").strip()
 
-    return Moneda(
+    return MonedaModel(
         id=moneda_id,
         codigo=codigo,
         nombre=nombre,
@@ -99,9 +79,8 @@ def crear_moneda() -> Moneda:
     )
 
 
-def mostrar_moneda(moneda: Moneda) -> None:
+def mostrar_moneda(moneda: MonedaModel) -> None:
     """Muestra los datos de una moneda."""
-
     print(
         f"ID: {moneda.id} | "
         f"Código: {moneda.codigo} | "
@@ -110,14 +89,13 @@ def mostrar_moneda(moneda: Moneda) -> None:
     )
 
 
-def modificar_moneda(moneda: Moneda) -> Moneda:
+def modificar_moneda(moneda: MonedaModel) -> MonedaModel:
     """Solicita los nuevos datos de una moneda."""
-
     codigo = input("Nuevo código: ").strip()
     nombre = input("Nuevo nombre: ").strip()
     simbolo = input("Nuevo símbolo: ").strip()
 
-    return Moneda(
+    return MonedaModel(
         id=moneda.id,
         codigo=codigo,
         nombre=nombre,
@@ -129,37 +107,23 @@ def modificar_moneda(moneda: Moneda) -> Moneda:
 # TIPOS DE COTIZACIÓN
 # =========================================================
 
-def crear_tipo_cotizacion() -> TipoCotizacion:
+def crear_tipo_cotizacion() -> TipoCotizacionModel:
     """Solicita los datos para crear un tipo de cotización."""
-
     tipo_id = int(input("ID: "))
     nombre = input("Nombre: ").strip()
 
-    return TipoCotizacion(
-        id=tipo_id,
-        nombre=nombre,
-    )
+    return TipoCotizacionModel(id=tipo_id, nombre=nombre)
 
 
-def mostrar_tipo_cotizacion(
-    tipo: TipoCotizacion,
-) -> None:
+def mostrar_tipo_cotizacion(tipo: TipoCotizacionModel) -> None:
     """Muestra los datos de un tipo de cotización."""
-
-    print(
-        f"ID: {tipo.id} | "
-        f"Nombre: {tipo.nombre}"
-    )
+    print(f"ID: {tipo.id} | Nombre: {tipo.nombre}")
 
 
 def modificar_tipo_cotizacion(
-    tipo: TipoCotizacion,
-) -> TipoCotizacion:
+    tipo: TipoCotizacionModel,
+) -> TipoCotizacionModel:
     """Solicita los nuevos datos de un tipo de cotización."""
-
     nombre = input("Nuevo nombre: ").strip()
 
-    return TipoCotizacion(
-        id=tipo.id,
-        nombre=nombre,
-    )
+    return TipoCotizacionModel(id=tipo.id, nombre=nombre)

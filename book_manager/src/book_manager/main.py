@@ -1,4 +1,23 @@
 
+"""
+Punto de entrada del sistema Book Manager.
+
+Inicializa SQLite, los repositorios, los servicios
+y la interfaz de consola.
+"""
+
+from book_manager.database.connection import ConexionDB
+
+from book_manager.models.models import (
+    Base,
+    GeneroModel,
+    EditorialModel,
+    MonedaModel,
+    TipoCotizacionModel,
+    LibroModel,
+    PrecioModel,
+)
+
 from book_manager.preload_data.preload_data import cargar_datos
 
 from book_manager.repositories.repositories import (
@@ -16,44 +35,54 @@ from book_manager.services.services import (
 )
 
 from book_manager.ui.console import Consola
+from pathlib import Path
 
+def main(import_default_data: bool = False) -> None:
+    """
+    Inicializa y ejecuta Book Manager.
 
-def main(import_default_data: bool = True) -> None:
-    """Inicializa y ejecuta el sistema Book Manager."""
+    Args:
+        import_default_data: Si es True, importa los datos
+            iniciales desde los archivos CSV cuando la
+            base de datos está vacía.
+    """
 
     # -------------------------------------------
-    # Inicialización de repositorios
+    # 1. Inicialización de SQLite
+    # -------------------------------------------
+
+    ruta_db = Path(__file__).resolve().parents[2] / "book_manager.db"
+
+    conexion = ConexionDB(f"sqlite:///{ruta_db}")
+
+    Base.metadata.create_all(conexion.engine)
+
+    # -------------------------------------------
+    # 2. Carga opcional de datos iniciales
     # -------------------------------------------
 
     if import_default_data:
-
-        # Cargar los datos existentes desde CSV
-        # y habilitar persistencia.
-        repositorios = cargar_datos(
-            persistir=True
-        )
-
-        print("Datos iniciales cargados correctamente.")
-
-    else:
-
-        # Crear repositorios vacíos, sin importar
-        # los datos iniciales.
-        repositorios = {
-            "generos": Repositorio(),
-            "editoriales": Repositorio(),
-            "monedas": Repositorio(),
-            "tipos_cotizacion": Repositorio(),
-            "libros": Repositorio(),
-            "precios": Repositorio(),
-            "stock": RepositorioStock(),
-            "cotizaciones": RepositorioCotizacionDolar(),
-        }
-
-        print("Sistema iniciado sin datos iniciales.")
+        cargar_datos(conexion)
 
     # -------------------------------------------
-    # Creación de servicios
+    # 3. Inicialización de repositorios
+    # -------------------------------------------
+
+    repositorios = {
+        "generos": Repositorio(conexion, GeneroModel),
+        "editoriales": Repositorio(conexion, EditorialModel),
+        "monedas": Repositorio(conexion, MonedaModel),
+        "tipos_cotizacion": Repositorio(
+            conexion, TipoCotizacionModel
+        ),
+        "libros": Repositorio(conexion, LibroModel),
+        "precios": Repositorio(conexion, PrecioModel),
+        "stock": RepositorioStock(conexion),
+        "cotizaciones": RepositorioCotizacionDolar(conexion),
+    }
+
+    # -------------------------------------------
+    # 4. Inicialización de servicios
     # -------------------------------------------
 
     servicio_generos = ServicioBase(
@@ -89,7 +118,7 @@ def main(import_default_data: bool = True) -> None:
     )
 
     # -------------------------------------------
-    # Creación de la consola
+    # 5. Inicialización de la consola
     # -------------------------------------------
 
     consola = Consola(
@@ -104,7 +133,7 @@ def main(import_default_data: bool = True) -> None:
     )
 
     # -------------------------------------------
-    # Ejecución del sistema
+    # 6. Ejecución
     # -------------------------------------------
 
     consola.ejecutar()

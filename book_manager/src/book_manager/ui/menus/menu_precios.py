@@ -1,5 +1,13 @@
 
-from book_manager.entities.entities import Precio
+"""
+Interfaz de consola para la gestión de precios con SQLAlchemy.
+"""
+
+from decimal import Decimal, InvalidOperation
+
+from sqlalchemy.exc import IntegrityError
+
+from book_manager.models.models import PrecioModel
 from book_manager.services.services import ServicioBase, ServicioPrecio
 
 
@@ -56,6 +64,47 @@ class MenuPrecios:
         print("0. Volver")
         print("=" * 40)
 
+    @staticmethod
+    def mostrar_precio(precio: PrecioModel) -> None:
+        """Muestra un precio junto con sus relaciones."""
+
+        print(
+            f"ID: {precio.id} | "
+            f"Libro: {precio.libro.titulo} | "
+            f"Moneda: {precio.moneda.codigo} | "
+            f"Valor: {precio.moneda.simbolo}{precio.valor:.2f}"
+        )
+
+    @staticmethod
+    def solicitar_valor(mensaje: str) -> Decimal:
+        """Solicita un importe positivo con precisión decimal."""
+
+        texto = input(mensaje).strip().replace(",", ".")
+
+        try:
+            valor = Decimal(texto)
+        except InvalidOperation as error:
+            raise ValueError(
+                "El valor debe ser un número válido."
+            ) from error
+
+        if not valor.is_finite() or valor <= 0:
+            raise ValueError(
+                "El precio debe ser un número finito mayor que cero."
+            )
+
+        if valor.as_tuple().exponent < -2:
+            raise ValueError(
+                "El precio puede tener como máximo dos decimales."
+            )
+
+        if valor > Decimal("9999999999999.99"):
+            raise ValueError(
+                "El precio supera el máximo permitido."
+            )
+
+        return valor
+
     def listar_precios(self) -> None:
         """Lista todos los precios."""
 
@@ -68,12 +117,7 @@ class MenuPrecios:
         print("\n--- LISTADO DE PRECIOS ---")
 
         for precio in precios:
-            print(
-                f"ID: {precio.id} | "
-                f"Libro: {precio.libro.titulo} | "
-                f"Moneda: {precio.moneda.codigo} | "
-                f"Valor: {precio.moneda.simbolo}{precio.valor:.2f}"
-            )
+            self.mostrar_precio(precio)
 
     def buscar_precio(self) -> None:
         """Busca un precio por su ID."""
@@ -88,16 +132,14 @@ class MenuPrecios:
                 return
 
             print("\n--- PRECIO ENCONTRADO ---")
-            print(f"ID: {precio.id}")
-            print(f"Libro: {precio.libro.titulo}")
-            print(f"Moneda: {precio.moneda.nombre}")
-            print(f"Valor: {precio.moneda.simbolo}{precio.valor:.2f}")
+
+            self.mostrar_precio(precio)
 
         except ValueError:
             print("\nEl ID debe ser un número entero.")
 
     def crear_precio(self) -> None:
-        """Crea un nuevo precio."""
+        """Crea un nuevo precio mediante claves foráneas ORM."""
 
         try:
             print("\n--- CREAR PRECIO ---")
@@ -105,7 +147,8 @@ class MenuPrecios:
             precio_id = int(input("ID: "))
             libro_id = int(input("ID del libro: "))
             moneda_id = int(input("ID de la moneda: "))
-            valor = float(input("Valor: "))
+
+            valor = self.solicitar_valor("Valor: ")
 
             libro = self.servicio_libros.obtener_por_id(libro_id)
             moneda = self.servicio_monedas.obtener_por_id(moneda_id)
@@ -118,10 +161,10 @@ class MenuPrecios:
                 print("\nLa moneda indicada no existe.")
                 return
 
-            precio = Precio(
+            precio = PrecioModel(
                 id=precio_id,
-                libro=libro,
-                moneda=moneda,
+                libro_id=libro_id,
+                moneda_id=moneda_id,
                 valor=valor,
             )
 
@@ -129,11 +172,11 @@ class MenuPrecios:
 
             print("\nPrecio creado correctamente.")
 
-        except ValueError as error:
-            print(f"\nError: {error}")
+        except (ValueError, IntegrityError) as error:
+            print(f"\nError al crear el precio: {error}")
 
     def modificar_precio(self) -> None:
-        """Modifica un precio existente."""
+        """Modifica el importe de un precio existente."""
 
         try:
             print("\n--- MODIFICAR PRECIO ---")
@@ -153,14 +196,38 @@ class MenuPrecios:
             ).strip()
 
             if valor_ingresado:
-                valor = float(valor_ingresado)
+                # Reutilizamos la validación del importe.
+                # Se utiliza el texto ya ingresado, sin pedirlo dos veces.
+                texto = valor_ingresado.replace(",", ".")
+
+                try:
+                    valor = Decimal(texto)
+                except InvalidOperation as error:
+                    raise ValueError(
+                        "El valor debe ser un número válido."
+                    ) from error
+
+                if not valor.is_finite() or valor <= 0:
+                    raise ValueError(
+                        "El precio debe ser mayor que cero."
+                    )
+
+                if valor.as_tuple().exponent < -2:
+                    raise ValueError(
+                        "El precio puede tener como máximo dos decimales."
+                    )
+
+                if valor > Decimal("9999999999999.99"):
+                    raise ValueError(
+                        "El precio supera el máximo permitido."
+                    )
             else:
                 valor = precio_actual.valor
 
-            precio_modificado = Precio(
+            precio_modificado = PrecioModel(
                 id=precio_actual.id,
-                libro=precio_actual.libro,
-                moneda=precio_actual.moneda,
+                libro_id=precio_actual.libro_id,
+                moneda_id=precio_actual.moneda_id,
                 valor=valor,
             )
 
@@ -168,8 +235,8 @@ class MenuPrecios:
 
             print("\nPrecio modificado correctamente.")
 
-        except ValueError as error:
-            print(f"\nError: {error}")
+        except (ValueError, IntegrityError) as error:
+            print(f"\nError al modificar el precio: {error}")
 
     def eliminar_precio(self) -> None:
         """Elimina un precio por su ID."""
@@ -203,5 +270,5 @@ class MenuPrecios:
 
             print("\nPrecio eliminado correctamente.")
 
-        except ValueError:
-            print("\nEl ID debe ser un número entero.")
+        except (ValueError, IntegrityError) as error:
+            print(f"\nError al eliminar el precio: {error}")

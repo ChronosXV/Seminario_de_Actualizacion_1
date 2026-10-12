@@ -1,289 +1,87 @@
 
-import csv
-from datetime import datetime
+"""
+Carga inicial de datos del sistema Book Manager.
+
+Utiliza la migración SQL generada a partir de los CSV
+para poblar una base de datos SQLite mediante SQLAlchemy.
+"""
+
 from pathlib import Path
-from typing import Dict
 
-from book_manager.entities.entities import (
-    CotizacionDolar,
-    Editorial,
-    Genero,
-    Libro,
-    Moneda,
-    Precio,
-    Stock,
-    TipoCotizacion,
-)
-from book_manager.repositories.repositories import (
-    Repositorio,
-    RepositorioCotizacionDolar,
-    RepositorioStock,
-)
+from sqlalchemy import text
+
+from book_manager.database.connection import ConexionDB
+from book_manager.migrations.migrations import migrar_datos
+from book_manager.models.models import Base, GeneroModel
 
 
-def cargar_datos(ruta_base=None, persistir=True) -> Dict[str, object]:
-    """Carga los datos desde CSV y habilita persistencia opcional."""
+def cargar_datos(
+    conexion: ConexionDB,
+    ruta_base: str | Path | None = None,
+) -> None:
+    """
+    Carga los registros iniciales en SQLite si la base está vacía.
+
+    Args:
+        conexion (ConexionDB): Administrador de conexiones SQLite.
+        ruta_base (str | Path | None): Carpeta de archivos CSV.
+
+    Raises:
+        FileNotFoundError: Si no existen los archivos necesarios.
+        ValueError: Si la base contiene una carga parcial.
+    """
+    ruta_migrations = Path(__file__).resolve().parent.parent / "migrations"
 
     ruta_csv = (
         Path(ruta_base)
         if ruta_base is not None
-        else Path(__file__).resolve().parent.parent / "migrations" / "csv"
+        else ruta_migrations / "csv"
     )
 
-    repo_generos = Repositorio[Genero]()
-    repo_editoriales = Repositorio[Editorial]()
-    repo_monedas = Repositorio[Moneda]()
-    repo_tipos_cotizacion = Repositorio[TipoCotizacion]()
-    repo_libros = Repositorio[Libro]()
-    repo_precios = Repositorio[Precio]()
-    repo_stock = RepositorioStock()
-    repo_cotizaciones = RepositorioCotizacionDolar()
+    ruta_sql = ruta_migrations / "sql"
 
-    # -------------------------------------------
-    # Géneros
-    # -------------------------------------------
+    Base.metadata.create_all(conexion.engine)
 
-    with open(
-        ruta_csv / "generos.csv",
-        encoding="utf-8",
-        newline="",
-    ) as archivo:
-        lector = csv.DictReader(archivo)
+    # Verificar el estado de las ocho tablas.
+    with conexion.obtener_sesion() as sesion:
+        tablas = list(Base.metadata.sorted_tables)
 
-        for fila in lector:
-            genero = Genero(
-                id=int(fila["id"]),
-                nombre=fila["nombre"],
-            )
-            repo_generos.crear(genero)
+        cantidades = {
+            tabla.name: sesion.execute(
+                text(f'SELECT COUNT(*) FROM "{tabla.name}"')
+            ).scalar_one()
+            for tabla in tablas
+        }
 
-    # -------------------------------------------
-    # Editoriales
-    # -------------------------------------------
+    if all(cantidad > 0 for cantidad in cantidades.values()):
+        print("La base ya contiene datos. No se repite la carga.")
+        return
 
-    with open(
-        ruta_csv / "editoriales.csv",
-        encoding="utf-8",
-        newline="",
-    ) as archivo:
-        lector = csv.DictReader(archivo)
+    if any(cantidad > 0 for cantidad in cantidades.values()):
+        raise ValueError(
+            "La base contiene datos parciales. "
+            "Se cancela la carga inicial para evitar duplicados."
+        )
 
-        for fila in lector:
-            editorial = Editorial(
-                id=int(fila["id"]),
-                nombre=fila["nombre"],
-            )
-            repo_editoriales.crear(editorial)
+    # Generar el archivo SQL utilizando la migración existente.
+    archivo_sql = migrar_datos(
+        str(ruta_csv),
+        str(ruta_sql),
+    )
 
-    # -------------------------------------------
-    # Monedas
-    # -------------------------------------------
+    contenido_sql = archivo_sql.read_text(encoding="utf-8")
 
-    with open(
-        ruta_csv / "monedas.csv",
-        encoding="utf-8",
-        newline="",
-    ) as archivo:
-        lector = csv.DictReader(archivo)
+    # Ejecutar el script completo dentro de una transacción SQLite.
+    # La migración existente contiene instrucciones de transacción.
+    conexion_sqlite = conexion.engine.raw_connection()
 
-        for fila in lector:
-            moneda = Moneda(
-                id=int(fila["id"]),
-                codigo=fila["codigo"],
-                nombre=fila["nombre"],
-                simbolo=fila["simbolo"],
-            )
-            repo_monedas.crear(moneda)
+    try:
+        conexion_sqlite.executescript(contenido_sql)
+        conexion_sqlite.commit()
+    except Exception:
+        conexion_sqlite.rollback()
+        raise
+    finally:
+        conexion_sqlite.close()
 
-    # -------------------------------------------
-    # Tipos de cotización
-    # -------------------------------------------
-
-    with open(
-        ruta_csv / "tipos_cotizacion.csv",
-        encoding="utf-8",
-        newline="",
-    ) as archivo:
-        lector = csv.DictReader(archivo)
-
-        for fila in lector:
-            tipo = TipoCotizacion(
-                id=int(fila["id"]),
-                nombre=fila["nombre"],
-            )
-            repo_tipos_cotizacion.crear(tipo)
-
-    # -------------------------------------------
-    # Libros
-    # -------------------------------------------
-
-    with open(
-        ruta_csv / "libros.csv",
-        encoding="utf-8",
-        newline="",
-    ) as archivo:
-        lector = csv.DictReader(archivo)
-
-        for fila in lector:
-            editorial = repo_editoriales.leer_por_id(
-                int(fila["editorial_id"])
-            )
-            genero = repo_generos.leer_por_id(
-                int(fila["genero_id"])
-            )
-
-            if editorial is None:
-                raise ValueError(
-                    f"Editorial inexistente: {fila['editorial_id']}"
-                )
-
-            if genero is None:
-                raise ValueError(
-                    f"Género inexistente: {fila['genero_id']}"
-                )
-
-            libro = Libro(
-                id=int(fila["id"]),
-                isbn=fila["isbn"],
-                titulo=fila["titulo"],
-                autor=fila["autor"],
-                editorial=editorial,
-                genero=genero,
-            )
-
-            repo_libros.crear(libro)
-
-    # -------------------------------------------
-    # Precios
-    # -------------------------------------------
-
-    with open(
-        ruta_csv / "precios.csv",
-        encoding="utf-8",
-        newline="",
-    ) as archivo:
-        lector = csv.DictReader(archivo)
-
-        for fila in lector:
-            libro = repo_libros.leer_por_id(
-                int(fila["libro_id"])
-            )
-            moneda = repo_monedas.leer_por_id(
-                int(fila["moneda_id"])
-            )
-
-            if libro is None:
-                raise ValueError(
-                    f"Libro inexistente: {fila['libro_id']}"
-                )
-
-            if moneda is None:
-                raise ValueError(
-                    f"Moneda inexistente: {fila['moneda_id']}"
-                )
-
-            precio = Precio(
-                id=int(fila["id"]),
-                libro=libro,
-                moneda=moneda,
-                valor=float(fila["valor"]),
-            )
-
-            repo_precios.crear(precio)
-
-    # -------------------------------------------
-    # Stock
-    # -------------------------------------------
-
-    with open(
-        ruta_csv / "stock.csv",
-        encoding="utf-8",
-        newline="",
-    ) as archivo:
-        lector = csv.DictReader(archivo)
-
-        for fila in lector:
-            libro = repo_libros.leer_por_id(
-                int(fila["libro_id"])
-            )
-
-            if libro is None:
-                raise ValueError(
-                    f"Libro inexistente: {fila['libro_id']}"
-                )
-
-            stock = Stock(
-                id=int(fila["id"]),
-                libro=libro,
-                cantidad=int(fila["cantidad"]),
-            )
-
-            repo_stock.crear(stock)
-
-    # -------------------------------------------
-    # Cotizaciones del dólar
-    # -------------------------------------------
-
-    with open(
-        ruta_csv / "cotizaciones_dolar.csv",
-        encoding="utf-8",
-        newline="",
-    ) as archivo:
-        lector = csv.DictReader(archivo)
-
-        for fila in lector:
-            tipo = repo_tipos_cotizacion.leer_por_id(
-                int(fila["tipo_cotizacion_id"])
-            )
-            moneda = repo_monedas.leer_por_id(
-                int(fila["moneda_id"])
-            )
-
-            if tipo is None:
-                raise ValueError(
-                    "Tipo de cotización inexistente: "
-                    f"{fila['tipo_cotizacion_id']}"
-                )
-
-            if moneda is None:
-                raise ValueError(
-                    f"Moneda inexistente: {fila['moneda_id']}"
-                )
-
-            cotizacion = CotizacionDolar(
-                id=int(fila["id"]),
-                tipo_cotizacion=tipo,
-                moneda=moneda,
-                fecha=datetime.strptime(
-                    fila["fecha"], "%Y-%m-%d"
-                ).date(),
-                valor_compra=float(fila["valor_compra"]),
-                valor_venta=float(fila["valor_venta"]),
-            )
-
-            repo_cotizaciones.crear(cotizacion)
-
-    # -------------------------------------------
-    # Habilitar persistencia CSV
-    # -------------------------------------------
-
-    if persistir:
-        repo_generos._ruta_csv = ruta_csv / "generos.csv"
-        repo_editoriales._ruta_csv = ruta_csv / "editoriales.csv"
-        repo_monedas._ruta_csv = ruta_csv / "monedas.csv"
-        repo_tipos_cotizacion._ruta_csv = ruta_csv / "tipos_cotizacion.csv"
-        repo_libros._ruta_csv = ruta_csv / "libros.csv"
-        repo_precios._ruta_csv = ruta_csv / "precios.csv"
-        repo_stock._ruta_csv = ruta_csv / "stock.csv"
-        repo_cotizaciones._ruta_csv = ruta_csv / "cotizaciones_dolar.csv"
-
-    return {
-        "generos": repo_generos,
-        "editoriales": repo_editoriales,
-        "monedas": repo_monedas,
-        "tipos_cotizacion": repo_tipos_cotizacion,
-        "libros": repo_libros,
-        "precios": repo_precios,
-        "stock": repo_stock,
-        "cotizaciones": repo_cotizaciones,
-    }
+    print("Datos iniciales cargados correctamente en SQLite.")
