@@ -6,9 +6,15 @@ Contiene la lógica de negocio y las validaciones necesarias
 para operar con los modelos ORM mediante los repositorios.
 """
 
-from datetime import date
+import os
+from datetime import date, datetime
+from decimal import Decimal
+from pathlib import Path
 from typing import Generic, TypeVar
+from zoneinfo import ZoneInfo
 
+import requests
+from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase
 
 from book_manager.models.models import (
@@ -32,27 +38,21 @@ class ServicioBase(Generic[M]):
     """Servicio genérico para operaciones CRUD."""
 
     def __init__(self, repositorio: Repositorio[M]) -> None:
-        """Inicializa el servicio con su repositorio."""
         self._repositorio = repositorio
 
     def crear(self, entidad: M) -> M:
-        """Crea una entidad en la base de datos."""
         return self._repositorio.crear(entidad)
 
     def obtener_por_id(self, id: int) -> M | None:
-        """Obtiene una entidad mediante su identificador."""
         return self._repositorio.leer_por_id(id)
 
     def obtener_todos(self) -> list[M]:
-        """Obtiene todas las entidades."""
         return self._repositorio.leer_todos()
 
     def actualizar(self, entidad: M) -> M:
-        """Actualiza una entidad existente."""
         return self._repositorio.actualizar(entidad)
 
     def eliminar(self, id: int) -> bool:
-        """Elimina una entidad mediante su identificador."""
         return self._repositorio.eliminar(id)
 
 
@@ -60,7 +60,7 @@ class ServicioLibro(ServicioBase[LibroModel]):
     """Servicio de gestión de libros."""
 
     def crear(self, libro: LibroModel) -> LibroModel:
-        """Valida y registra un libro."""
+
         if not libro.isbn or not libro.isbn.strip():
             raise ValueError("El ISBN no puede estar vacío.")
 
@@ -77,7 +77,7 @@ class ServicioPrecio(ServicioBase[PrecioModel]):
     """Servicio de gestión de precios."""
 
     def crear(self, precio: PrecioModel) -> PrecioModel:
-        """Valida y registra un precio."""
+
         if precio.valor is None or precio.valor <= 0:
             raise ValueError("El precio debe ser mayor que cero.")
 
@@ -88,29 +88,26 @@ class ServicioStock:
     """Servicio de gestión de existencias."""
 
     def __init__(self, repositorio: RepositorioStock) -> None:
-        """Inicializa el servicio con el repositorio de stock."""
         self._repositorio = repositorio
 
     def crear(self, stock: StockModel) -> StockModel:
-        """Valida y registra el stock de un libro."""
+
         if stock.cantidad is None or stock.cantidad < 0:
             raise ValueError("El stock no puede ser negativo.")
 
         return self._repositorio.crear(stock)
 
     def obtener_por_libro(self, libro_id: int) -> StockModel | None:
-        """Obtiene el stock de un libro."""
         return self._repositorio.leer_por_libro(libro_id)
 
     def actualizar(self, stock: StockModel) -> StockModel:
-        """Valida y actualiza el stock de un libro."""
+
         if stock.cantidad is None or stock.cantidad < 0:
             raise ValueError("El stock no puede ser negativo.")
 
         return self._repositorio.actualizar(stock)
 
     def eliminar(self, libro_id: int) -> bool:
-        """Elimina el stock asociado a un libro."""
         return self._repositorio.eliminar_por_libro(libro_id)
 
 
@@ -121,7 +118,6 @@ class ServicioCotizacionDolar:
         self,
         repositorio: RepositorioCotizacionDolar,
     ) -> None:
-        """Inicializa el servicio con el repositorio de cotizaciones."""
         self._repositorio = repositorio
 
     def _validar(
@@ -129,6 +125,7 @@ class ServicioCotizacionDolar:
         cotizacion: CotizacionDolarModel,
     ) -> None:
         """Valida los valores de compra y venta."""
+
         if cotizacion.valor_compra is None or cotizacion.valor_compra <= 0:
             raise ValueError(
                 "El valor de compra debe ser mayor que cero."
@@ -141,8 +138,7 @@ class ServicioCotizacionDolar:
 
         if cotizacion.valor_venta < cotizacion.valor_compra:
             raise ValueError(
-                "El valor de venta no puede ser menor "
-                "que el valor de compra."
+                "El valor de venta no puede ser menor que el valor de compra."
             )
 
     def crear(
@@ -150,6 +146,7 @@ class ServicioCotizacionDolar:
         cotizacion: CotizacionDolarModel,
     ) -> CotizacionDolarModel:
         """Valida y registra una cotización."""
+
         self._validar(cotizacion)
         return self._repositorio.crear(cotizacion)
 
@@ -158,7 +155,7 @@ class ServicioCotizacionDolar:
         tipo_id: int,
         fecha: date,
     ) -> CotizacionDolarModel | None:
-        """Obtiene una cotización por tipo y fecha."""
+
         return self._repositorio.leer_por_tipo_y_fecha(
             tipo_id,
             fecha,
@@ -168,14 +165,14 @@ class ServicioCotizacionDolar:
         self,
         tipo_id: int,
     ) -> list[CotizacionDolarModel]:
-        """Obtiene el historial de cotizaciones de un tipo."""
+
         return self._repositorio.leer_historico_por_tipo(tipo_id)
 
     def actualizar(
         self,
         cotizacion: CotizacionDolarModel,
     ) -> CotizacionDolarModel:
-        """Valida y actualiza una cotización."""
+
         self._validar(cotizacion)
         return self._repositorio.actualizar(cotizacion)
 
@@ -184,8 +181,127 @@ class ServicioCotizacionDolar:
         tipo_id: int,
         fecha: date,
     ) -> bool:
-        """Elimina una cotización por tipo y fecha."""
+
         return self._repositorio.eliminar_por_tipo_y_fecha(
             tipo_id,
             fecha,
         )
+
+    def obtener_cotizaciones(self) -> dict[str, int]:
+        """
+        Descarga cotizaciones desde DolarAPI.
+
+        Crea nuevas cotizaciones y actualiza las existentes
+        según el tipo de dólar y la fecha.
+        """
+
+        # 1. Leer configuración del archivo .env
+
+        ruta_env = Path(__file__).resolve().parents[3] / ".env"
+
+        load_dotenv(ruta_env)
+
+        api_url = os.getenv("API_URL")
+
+        if not api_url:
+            raise ValueError(
+                "No se encontró API_URL en el archivo .env."
+            )
+
+        # 2. Consultar la API
+
+        respuesta = requests.get(api_url, timeout=15)
+        respuesta.raise_for_status()
+
+        datos = respuesta.json()
+
+        if not isinstance(datos, list):
+            raise ValueError(
+                "La API no devolvió una lista de cotizaciones."
+            )
+
+        # 3. Relacionar los tipos de dólar con nuestra BD
+
+        tipos = {
+            "oficial": 1,
+            "blue": 2,
+            "bolsa": 3,
+            "contadoconliqui": 4,
+            "mayorista": 5,
+            "cripto": 6,
+            "tarjeta": 8,
+        }
+
+        moneda_usd_id = 2
+
+        # 4. Inicializar contadores
+
+        creadas = 0
+        actualizadas = 0
+        omitidas = 0
+
+        # 5. Procesar cada cotización
+
+        for dato in datos:
+
+            tipo_id = tipos.get(dato.get("casa"))
+
+            if tipo_id is None or dato.get("moneda") != "USD":
+                omitidas += 1
+                continue
+
+            # Convertir la fecha UTC a fecha argentina
+
+            fecha_actualizacion = datetime.fromisoformat(
+                dato["fechaActualizacion"].replace("Z", "+00:00")
+            )
+
+            fecha_cotizacion = fecha_actualizacion.astimezone(
+                ZoneInfo("America/Argentina/Buenos_Aires")
+            ).date()
+
+            # Convertir importes a Decimal
+
+            compra = Decimal(str(dato["compra"]))
+            venta = Decimal(str(dato["venta"]))
+
+            # Buscar cotización existente
+
+            existente = self.obtener_por_tipo_y_fecha(
+                tipo_id,
+                fecha_cotizacion,
+            )
+
+            if existente is None:
+
+                # 6. Crear una nueva cotización
+
+                cotizacion = CotizacionDolarModel(
+                    tipo_cotizacion_id=tipo_id,
+                    moneda_id=moneda_usd_id,
+                    fecha=fecha_cotizacion,
+                    valor_compra=compra,
+                    valor_venta=venta,
+                )
+
+                self.crear(cotizacion)
+                creadas += 1
+
+            else:
+
+                # 7. Actualizar una cotización existente
+
+                existente.moneda_id = moneda_usd_id
+                existente.valor_compra = compra
+                existente.valor_venta = venta
+
+                self.actualizar(existente)
+                actualizadas += 1
+
+        # 8. Devolver resumen
+
+        return {
+            "creadas": creadas,
+            "actualizadas": actualizadas,
+            "omitidas": omitidas,
+        }
