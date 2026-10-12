@@ -90,6 +90,10 @@ class ServicioStock:
     def __init__(self, repositorio: RepositorioStock) -> None:
         self._repositorio = repositorio
 
+    def listar(self) -> list[StockModel]:
+        """Obtiene todos los registros de stock."""
+        return self._repositorio.leer_todos()
+
     def crear(self, stock: StockModel) -> StockModel:
 
         if stock.cantidad is None or stock.cantidad < 0:
