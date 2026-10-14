@@ -1,4 +1,7 @@
 
+[Ejercicio 5]
+* Dia 5 migración de datos a sql
+
 [Ejercicio 4]
 * Dia 4 Creación de las tablas y sus relaciones.
 
@@ -9,4 +12,4 @@
 * Dia 2 Creación de la clase ConexionDB que maneje la conexion usando SQLAlchemy.
 
 [Ejercicio 1]
-* Dia 1 Inicialización y configuración de la herramienta de versionado y armado de estructura de directorio.
+* Dia 1 Inicialización y configuración de la herramienta de versionado y armado de estructura de directorio
