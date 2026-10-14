@@ -2,7 +2,7 @@
 """
 Punto de entrada del sistema Book Manager.
 
-Inicializa SQLite, los repositorios, los servicios
+Inicializa la base de datos, los repositorios, los servicios
 y la interfaz de consola.
 """
 
