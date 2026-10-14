@@ -48,14 +48,14 @@ def main(import_default_data: bool = False) -> None:
     """
 
     # -------------------------------------------
-    # 1. Inicialización de SQLite
+    # 1. Inicialización de base de datos
     # -------------------------------------------
 
-    ruta_db = Path(__file__).resolve().parents[2] / "book_manager.db"
-
-    conexion = ConexionDB(f"sqlite:///{ruta_db}")
+    conexion = ConexionDB()
 
     Base.metadata.create_all(conexion.engine)
+
+    print(f"Base de datos utilizada: {conexion.engine.dialect.name}")
 
     # -------------------------------------------
     # 2. Carga opcional de datos iniciales
