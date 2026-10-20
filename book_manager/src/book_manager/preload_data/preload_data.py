@@ -85,3 +85,71 @@ def cargar_datos(
         conexion_sqlite.close()
 
     print("Datos iniciales cargados correctamente en SQLite.")
+
+
+def cargar_datos_desde_sql(
+    conexion: ConexionDB,
+    ruta_sql: str | Path,
+) -> int:
+    """
+    Carga datos ejecutando instrucciones SQL desde un archivo.
+
+    Args:
+        conexion: Administrador de conexión a la base de datos.
+        ruta_sql: Ruta del archivo SQL que se desea ejecutar.
+
+    Returns:
+        int: Cantidad de instrucciones SQL ejecutadas.
+
+    Raises:
+        FileNotFoundError: Si el archivo SQL no existe.
+        ValueError: Si el archivo no contiene instrucciones válidas.
+    """
+    archivo = Path(ruta_sql)
+
+    if not archivo.is_file():
+        raise FileNotFoundError(
+            f"No se encontró el archivo SQL: {archivo}"
+        )
+
+    contenido = archivo.read_text(encoding="utf-8")
+
+    instrucciones = []
+
+    for bloque in contenido.split(";"):
+        lineas = [
+            linea
+            for linea in bloque.splitlines()
+            if linea.strip()
+            and not linea.strip().startswith("--")
+        ]
+
+        instruccion = "\n".join(lineas).strip()
+
+        if not instruccion:
+            continue
+
+        if instruccion.upper() in (
+            "BEGIN",
+            "BEGIN TRANSACTION",
+            "COMMIT",
+        ):
+            continue
+
+        instrucciones.append(instruccion)
+
+    if not instrucciones:
+        raise ValueError(
+            "El archivo SQL no contiene instrucciones para ejecutar."
+        )
+
+    with conexion.obtener_sesion() as sesion:
+        for instruccion in instrucciones:
+            sesion.execute(text(instruccion))
+
+    print(
+        f"Carga SQL finalizada: "
+        f"{len(instrucciones)} instrucciones ejecutadas."
+    )
+
+    return len(instrucciones)
