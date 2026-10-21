@@ -1,3 +1,4 @@
+
 """
 Definición de los datos extraídos mediante Scrapy.
 
@@ -8,8 +9,9 @@ import scrapy
 
 
 class LibroItem(scrapy.Item):
-    """Representa la información de un libro extraído de Cúspide."""
+    """Representa un libro encontrado en Cúspide."""
 
+    titulo_buscado = scrapy.Field()
     titulo = scrapy.Field()
     precio = scrapy.Field()
     imagen_url = scrapy.Field()
