@@ -59,7 +59,8 @@ class CuspideSpider(scrapy.Spider):
             )
 
     async def start(self):
-        """Genera una búsqueda por cada título del catálogo."""
+        """Genera una búsqueda por cada título del catálogo.
+        Nota: En la clase vimos start_requests(), pero nosotros utilizamos async def start() porque es el recomendado con Scrapy 2.19, para generar las solicitudes iniciales."""
 
         for titulo in self.titulos:
 
