@@ -17,6 +17,8 @@ import requests
 from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase
 
+from book_manager.auditoria.auditoria import auditar
+
 from book_manager.models.models import (
     LibroModel,
     PrecioModel,
@@ -40,18 +42,23 @@ class ServicioBase(Generic[M]):
     def __init__(self, repositorio: Repositorio[M]) -> None:
         self._repositorio = repositorio
 
+    @auditar("CREAR")
     def crear(self, entidad: M) -> M:
         return self._repositorio.crear(entidad)
 
+    @auditar("CONSULTAR_POR_ID")
     def obtener_por_id(self, id: int) -> M | None:
         return self._repositorio.leer_por_id(id)
 
+    @auditar("LISTAR")
     def obtener_todos(self) -> list[M]:
         return self._repositorio.leer_todos()
 
+    @auditar("ACTUALIZAR")
     def actualizar(self, entidad: M) -> M:
         return self._repositorio.actualizar(entidad)
 
+    @auditar("ELIMINAR")
     def eliminar(self, id: int) -> bool:
         return self._repositorio.eliminar(id)
 
@@ -59,6 +66,7 @@ class ServicioBase(Generic[M]):
 class ServicioLibro(ServicioBase[LibroModel]):
     """Servicio de gestión de libros."""
 
+    @auditar("CREAR_LIBRO")
     def crear(self, libro: LibroModel) -> LibroModel:
 
         if not libro.isbn or not libro.isbn.strip():
@@ -76,6 +84,7 @@ class ServicioLibro(ServicioBase[LibroModel]):
 class ServicioPrecio(ServicioBase[PrecioModel]):
     """Servicio de gestión de precios."""
 
+    @auditar("CREAR_PRECIO")
     def crear(self, precio: PrecioModel) -> PrecioModel:
 
         if precio.valor is None or precio.valor <= 0:
@@ -90,10 +99,12 @@ class ServicioStock:
     def __init__(self, repositorio: RepositorioStock) -> None:
         self._repositorio = repositorio
 
+    @auditar("LISTAR_STOCK")
     def listar(self) -> list[StockModel]:
         """Obtiene todos los registros de stock."""
         return self._repositorio.leer_todos()
 
+    @auditar("CREAR_STOCK")
     def crear(self, stock: StockModel) -> StockModel:
 
         if stock.cantidad is None or stock.cantidad < 0:
@@ -101,9 +112,11 @@ class ServicioStock:
 
         return self._repositorio.crear(stock)
 
+    @auditar("CONSULTAR_STOCK")
     def obtener_por_libro(self, libro_id: int) -> StockModel | None:
         return self._repositorio.leer_por_libro(libro_id)
 
+    @auditar("ACTUALIZAR_STOCK")
     def actualizar(self, stock: StockModel) -> StockModel:
 
         if stock.cantidad is None or stock.cantidad < 0:
@@ -111,6 +124,7 @@ class ServicioStock:
 
         return self._repositorio.actualizar(stock)
 
+    @auditar("ELIMINAR_STOCK")
     def eliminar(self, libro_id: int) -> bool:
         return self._repositorio.eliminar_por_libro(libro_id)
 
@@ -145,6 +159,7 @@ class ServicioCotizacionDolar:
                 "El valor de venta no puede ser menor que el valor de compra."
             )
 
+    @auditar("CREAR_COTIZACION")
     def crear(
         self,
         cotizacion: CotizacionDolarModel,
@@ -154,6 +169,7 @@ class ServicioCotizacionDolar:
         self._validar(cotizacion)
         return self._repositorio.crear(cotizacion)
 
+    @auditar("CONSULTAR_COTIZACION")
     def obtener_por_tipo_y_fecha(
         self,
         tipo_id: int,
@@ -165,6 +181,7 @@ class ServicioCotizacionDolar:
             fecha,
         )
 
+    @auditar("CONSULTAR_HISTORICO_COTIZACION")
     def obtener_historico(
         self,
         tipo_id: int,
@@ -172,6 +189,7 @@ class ServicioCotizacionDolar:
 
         return self._repositorio.leer_historico_por_tipo(tipo_id)
 
+    @auditar("ACTUALIZAR_COTIZACION")
     def actualizar(
         self,
         cotizacion: CotizacionDolarModel,
@@ -180,6 +198,7 @@ class ServicioCotizacionDolar:
         self._validar(cotizacion)
         return self._repositorio.actualizar(cotizacion)
 
+    @auditar("ELIMINAR_COTIZACION")
     def eliminar(
         self,
         tipo_id: int,
@@ -191,6 +210,7 @@ class ServicioCotizacionDolar:
             fecha,
         )
 
+    @auditar("OBTENER_COTIZACIONES_API")
     def obtener_cotizaciones(self) -> dict[str, int]:
         """
         Descarga cotizaciones desde DolarAPI.

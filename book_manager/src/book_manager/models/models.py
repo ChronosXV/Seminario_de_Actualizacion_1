@@ -5,16 +5,18 @@ Define las tablas, sus tipos de datos, claves primarias,
 claves foráneas y relaciones mediante SQLAlchemy.
 """
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     CheckConstraint,
     Date,
+    DateTime,
     ForeignKey,
     Integer,
     Numeric,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import (
@@ -229,4 +231,32 @@ class CotizacionDolarModel(Base):
     )
     moneda: Mapped["MonedaModel"] = relationship(
         back_populates="cotizaciones"
+    )
+
+
+
+class AuditoriaModel(Base):
+    """Registra las operaciones realizadas en el sistema."""
+
+    __tablename__ = "auditoria"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    accion: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False
+    )
+
+    fecha: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.now
+    )
+
+    detalles: Mapped[str] = mapped_column(
+        Text,
+        nullable=False
     )
