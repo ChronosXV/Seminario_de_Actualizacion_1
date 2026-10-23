@@ -28,6 +28,8 @@ from book_manager.ui.menus.menu_libros import MenuLibros
 from book_manager.ui.menus.menu_precios import MenuPrecios
 from book_manager.ui.menus.menu_stock import MenuStock
 
+from book_manager.auditoria.auditoria import auditar
+
 
 class Consola:
     """Interfaz principal de usuario para Book Manager."""
@@ -313,6 +315,7 @@ class Consola:
     # OPCIÓN 10 - PRECIOS BIMONETARIOS
     # ======================================================
 
+    @auditar("VER_PRECIOS_BIMONETARIOS")
     def ver_precios_bimonetarios(self) -> None:
         """
         Muestra precios en ARS y otra moneda seleccionada.
@@ -463,6 +466,7 @@ class Consola:
     # ======================================================
     # OPCIÓN 11 - EXPORTAR PRECIOS A CSV
     # ======================================================
+    @auditar("EXPORTAR_PRECIOS_CSV")
     def exportar_precios_csv(self) -> None:
         """
         Exporta todos los precios registrados en la base
@@ -537,6 +541,7 @@ class Consola:
 
         except OSError as error:
             print(f"\nError al exportar el archivo: {error}")
+            raise
 
 
     # ======================================================
