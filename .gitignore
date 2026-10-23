@@ -5,3 +5,6 @@ book_manager.db
 book_manager.db
 book_manager.db
 book_manager.db
+book_manager/src/book_manager/reportes/*.csv
+book_manager/src/book_manager/reportes/*.xlsx
+book_manager/src/book_manager/reportes/*.json

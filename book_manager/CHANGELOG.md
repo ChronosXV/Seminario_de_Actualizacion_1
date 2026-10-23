@@ -1,4 +1,7 @@
 
+[Ejercicio 4]
+* Dia 4 Creación del archivo ejecutar_scraper.py, para la comparacion de precios.
+
 [Ejercicio 3]
 * Dia 3 Creación de la estructura del Scraper, Loaders  y Pipelines.
 
