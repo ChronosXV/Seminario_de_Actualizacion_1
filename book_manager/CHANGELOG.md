@@ -1,4 +1,7 @@
 
+[Ejercicio 6]
+* Dia 6 Creación del Decorador de Auditoría.
+
 [Ejercicio 5]
 * Dia 5 Creación del archivo reporte_excel.py.
 

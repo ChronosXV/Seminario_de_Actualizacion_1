@@ -5,17 +5,19 @@ Define las tablas, sus tipos de datos, claves primarias,
 claves foráneas y relaciones mediante SQLAlchemy.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
+    DateTime,
     ForeignKey,
     Integer,
     Numeric,
     String,
+    Text,
     Text,
     UniqueConstraint,
 )
