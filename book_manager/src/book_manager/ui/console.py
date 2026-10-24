@@ -548,6 +548,112 @@ class Consola:
     # MENÚ PRINCIPAL
     # ======================================================
 
+
+    def ejecutar_scraping(self) -> None:
+        """Ejecuta el scraping del Ejercicio 04."""
+
+        from book_manager.scraper.ejecutar_scraper import (
+            main as ejecutar_scraper
+        )
+
+        print("\n=== EJECUTAR SCRAPING ===")
+
+        try:
+            ruta_csv = ejecutar_scraper()
+
+            print("\nScraping finalizado correctamente.")
+            print("Archivo generado:", ruta_csv)
+
+        except Exception as error:
+            print(f"\nError al ejecutar scraping: {error}")
+
+
+    def generar_reporte(self) -> None:
+        """Genera el Excel a partir del último CSV del scraping."""
+
+        from book_manager.reportes.reporte_excel import generar_excel
+
+        print("\n=== GENERAR REPORTE EXCEL ===")
+
+        carpeta_reportes = (
+            Path(__file__).resolve().parents[1] / "reportes"
+        )
+
+        archivos_csv = list(
+            carpeta_reportes.glob("alertas_precios_*.csv")
+        )
+
+        if not archivos_csv:
+            print(
+                "\nNo se encontraron archivos CSV de alertas."
+            )
+            print(
+                "Primero debe ejecutar la opción 12: "
+                "Ejecutar scraping."
+            )
+            return
+
+        # Los nombres contienen fecha y hora de ejecución.
+        ruta_csv = max(
+            archivos_csv,
+            key=lambda archivo: archivo.name
+        )
+
+        print("\nCSV seleccionado:", ruta_csv.name)
+
+        try:
+            ruta_excel = generar_excel(ruta_csv)
+
+            print("\nReporte generado correctamente.")
+            print("Archivo Excel:", ruta_excel)
+
+        except Exception as error:
+            print(f"\nError al generar el reporte: {error}")
+
+
+    def ver_historial_auditoria(self) -> None:
+        """Consulta y muestra el historial de auditoría."""
+
+        from sqlalchemy import select
+        from book_manager.database.connection import ConexionDB
+        from book_manager.models.models import AuditoriaModel
+
+        print("\n=== HISTORIAL DE AUDITORÍA ===")
+
+        try:
+            conexion = ConexionDB()
+
+            with conexion.obtener_sesion() as sesion:
+
+                registros = sesion.scalars(
+                    select(AuditoriaModel)
+                    .order_by(AuditoriaModel.id.desc())
+                ).all()
+
+                if not registros:
+                    print("\nNo hay registros de auditoría.")
+                    return
+
+                print("\nTotal de registros:", len(registros))
+                print("-" * 80)
+
+                for registro in registros:
+
+                    fecha = registro.fecha.strftime(
+                        "%d/%m/%Y %H:%M:%S"
+                    )
+
+                    print(f"ID: {registro.id}")
+                    print(f"Acción: {registro.accion}")
+                    print(f"Fecha: {fecha}")
+                    print(f"Detalles: {registro.detalles}")
+                    print("-" * 80)
+
+        except Exception as error:
+            print(
+                f"\nError al consultar la auditoría: {error}"
+            )
+
     def ejecutar(self) -> None:
         """Ejecuta el menú principal de la aplicación."""
 
@@ -592,6 +698,18 @@ class Consola:
             elif opcion == "11":
                 self.exportar_precios_csv()
 
+
+            elif opcion == "12":
+                self.ejecutar_scraping()
+
+
+            elif opcion == "13":
+                self.generar_reporte()
+
+
+            elif opcion == "14":
+                self.ver_historial_auditoria()
+
             elif opcion == "0":
                 print("\nSaliendo de Book Manager...")
                 break
@@ -620,6 +738,9 @@ class Consola:
         print("9. Obtener cotizaciones por API")
         print("10. Ver precios bimonetarios")
         print("11. Exportar precios a CSV")
+        print("12. Ejecutar scraping")
+        print("13. Generar reporte")
+        print("14. Ver historial de auditoría")
         print("0. Salir")
 
         print("=" * 45)
