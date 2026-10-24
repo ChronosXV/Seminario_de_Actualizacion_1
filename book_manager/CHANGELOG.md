@@ -1,4 +1,7 @@
 
+[Ejercicio 7]
+* Dia 7 Creación de nuevos opciones de menú.
+
 [Ejercicio 6]
 * Dia 6 Creación del Decorador de Auditoría.
 
