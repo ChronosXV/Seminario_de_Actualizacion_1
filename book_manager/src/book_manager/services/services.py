@@ -40,26 +40,32 @@ class ServicioBase(Generic[M]):
     """Servicio genérico para operaciones CRUD."""
 
     def __init__(self, repositorio: Repositorio[M]) -> None:
+        """Inicializa la instancia."""
         self._repositorio = repositorio
 
     @auditar("CREAR")
     def crear(self, entidad: M) -> M:
+        """Ejecuta la operación crear."""
         return self._repositorio.crear(entidad)
 
     @auditar("CONSULTAR_POR_ID")
     def obtener_por_id(self, id: int) -> M | None:
+        """Ejecuta la operación obtener por id."""
         return self._repositorio.leer_por_id(id)
 
     @auditar("LISTAR")
     def obtener_todos(self) -> list[M]:
+        """Ejecuta la operación obtener todos."""
         return self._repositorio.leer_todos()
 
     @auditar("ACTUALIZAR")
     def actualizar(self, entidad: M) -> M:
+        """Ejecuta la operación actualizar."""
         return self._repositorio.actualizar(entidad)
 
     @auditar("ELIMINAR")
     def eliminar(self, id: int) -> bool:
+        """Ejecuta la operación eliminar."""
         return self._repositorio.eliminar(id)
 
 
@@ -69,6 +75,7 @@ class ServicioLibro(ServicioBase[LibroModel]):
     @auditar("CREAR_LIBRO")
     def crear(self, libro: LibroModel) -> LibroModel:
 
+        """Ejecuta la operación crear."""
         if not libro.isbn or not libro.isbn.strip():
             raise ValueError("El ISBN no puede estar vacío.")
 
@@ -87,6 +94,7 @@ class ServicioPrecio(ServicioBase[PrecioModel]):
     @auditar("CREAR_PRECIO")
     def crear(self, precio: PrecioModel) -> PrecioModel:
 
+        """Ejecuta la operación crear."""
         if precio.valor is None or precio.valor <= 0:
             raise ValueError("El precio debe ser mayor que cero.")
 
@@ -97,6 +105,7 @@ class ServicioStock:
     """Servicio de gestión de existencias."""
 
     def __init__(self, repositorio: RepositorioStock) -> None:
+        """Inicializa la instancia."""
         self._repositorio = repositorio
 
     @auditar("LISTAR_STOCK")
@@ -107,6 +116,7 @@ class ServicioStock:
     @auditar("CREAR_STOCK")
     def crear(self, stock: StockModel) -> StockModel:
 
+        """Ejecuta la operación crear."""
         if stock.cantidad is None or stock.cantidad < 0:
             raise ValueError("El stock no puede ser negativo.")
 
@@ -114,11 +124,13 @@ class ServicioStock:
 
     @auditar("CONSULTAR_STOCK")
     def obtener_por_libro(self, libro_id: int) -> StockModel | None:
+        """Ejecuta la operación obtener por libro."""
         return self._repositorio.leer_por_libro(libro_id)
 
     @auditar("ACTUALIZAR_STOCK")
     def actualizar(self, stock: StockModel) -> StockModel:
 
+        """Ejecuta la operación actualizar."""
         if stock.cantidad is None or stock.cantidad < 0:
             raise ValueError("El stock no puede ser negativo.")
 
@@ -126,6 +138,7 @@ class ServicioStock:
 
     @auditar("ELIMINAR_STOCK")
     def eliminar(self, libro_id: int) -> bool:
+        """Ejecuta la operación eliminar."""
         return self._repositorio.eliminar_por_libro(libro_id)
 
 
@@ -136,6 +149,7 @@ class ServicioCotizacionDolar:
         self,
         repositorio: RepositorioCotizacionDolar,
     ) -> None:
+        """Inicializa la instancia."""
         self._repositorio = repositorio
 
     def _validar(
@@ -176,6 +190,7 @@ class ServicioCotizacionDolar:
         fecha: date,
     ) -> CotizacionDolarModel | None:
 
+        """Ejecuta la operación obtener por tipo y fecha."""
         return self._repositorio.leer_por_tipo_y_fecha(
             tipo_id,
             fecha,
@@ -187,6 +202,7 @@ class ServicioCotizacionDolar:
         tipo_id: int,
     ) -> list[CotizacionDolarModel]:
 
+        """Ejecuta la operación obtener historico."""
         return self._repositorio.leer_historico_por_tipo(tipo_id)
 
     @auditar("ACTUALIZAR_COTIZACION")
@@ -195,6 +211,7 @@ class ServicioCotizacionDolar:
         cotizacion: CotizacionDolarModel,
     ) -> CotizacionDolarModel:
 
+        """Ejecuta la operación actualizar."""
         self._validar(cotizacion)
         return self._repositorio.actualizar(cotizacion)
 
@@ -205,6 +222,7 @@ class ServicioCotizacionDolar:
         fecha: date,
     ) -> bool:
 
+        """Ejecuta la operación eliminar."""
         return self._repositorio.eliminar_por_tipo_y_fecha(
             tipo_id,
             fecha,

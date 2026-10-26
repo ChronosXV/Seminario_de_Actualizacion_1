@@ -29,6 +29,19 @@ from book_manager.ui.menus.menu_precios import MenuPrecios
 from book_manager.ui.menus.menu_stock import MenuStock
 
 from book_manager.auditoria.auditoria import auditar
+from book_manager.models.models import CotizacionDolarModel, TipoCotizacionModel, MonedaModel
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from book_manager.services.services import (
+        ServicioBase,
+        ServicioLibro,
+        ServicioPrecio,
+        ServicioStock,
+        ServicioCotizacionDolar,
+    )
+
 
 
 class Consola:
@@ -36,16 +49,17 @@ class Consola:
 
     def __init__(
         self,
-        servicio_libros,
-        servicio_editoriales,
-        servicio_generos,
-        servicio_precios,
-        servicio_monedas,
-        servicio_stock,
-        servicio_cotizaciones,
-        servicio_tipos_cotizacion,
+        servicio_libros: "ServicioLibro",
+        servicio_editoriales: "ServicioBase",
+        servicio_generos: "ServicioBase",
+        servicio_precios: "ServicioPrecio",
+        servicio_monedas: "ServicioBase",
+        servicio_stock: "ServicioStock",
+        servicio_cotizaciones: "ServicioCotizacionDolar",
+        servicio_tipos_cotizacion: "ServicioBase",
     ) -> None:
 
+        """Inicializa la consola y sus servicios."""
         self.servicio_libros = servicio_libros
         self.servicio_precios = servicio_precios
         self.servicio_monedas = servicio_monedas
@@ -210,7 +224,7 @@ class Consola:
             rounding=ROUND_HALF_UP,
         )
 
-    def obtener_ultima_cotizacion(self, tipo_id: int):
+    def obtener_ultima_cotizacion(self, tipo_id: int) -> CotizacionDolarModel | None:
         """Recupera la cotización más reciente de un tipo."""
 
         cotizaciones = (
@@ -225,7 +239,7 @@ class Consola:
             key=lambda cotizacion: cotizacion.fecha,
         )
 
-    def seleccionar_tipo_cotizacion(self):
+    def seleccionar_tipo_cotizacion(self) -> tuple[TipoCotizacionModel, CotizacionDolarModel] | None:
         """Permite seleccionar un tipo de cotización."""
 
         tipos = self.servicio_tipos_cotizacion.obtener_todos()
@@ -268,7 +282,7 @@ class Consola:
 
         return tipo, cotizacion
 
-    def seleccionar_moneda(self):
+    def seleccionar_moneda(self) -> MonedaModel | None:
         """
         Permite seleccionar una moneda por:
         - ID

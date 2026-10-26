@@ -17,6 +17,7 @@ from book_manager.models.models import (
     CotizacionDolarModel,
     StockModel,
 )
+from typing import Any
 
 
 M = TypeVar("M", bound=DeclarativeBase)
@@ -40,7 +41,7 @@ class Repositorio(Generic[M]):
         self._conexion = conexion
         self._modelo = modelo
 
-    def _opciones_relaciones(self):
+    def _opciones_relaciones(self) -> list[Any]:
         """
         Prepara la carga anticipada de relaciones del modelo ORM.
 

@@ -8,6 +8,8 @@ import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from typing import Iterator
+from sqlalchemy.orm import Session
 
 
 class ConexionDB:
@@ -15,7 +17,7 @@ class ConexionDB:
     Administra la conexión y las sesiones de la base de datos.
     """
 
-    def __init__(self, url_db=None):
+    def __init__(self, url_db: str | None = None) -> None:
         """
         Inicializa la conexión.
 
@@ -40,7 +42,7 @@ class ConexionDB:
             expire_on_commit=False
         )
 
-    def crear_sesion(self):
+    def crear_sesion(self) -> "Session":
         """
         Crea y devuelve una sesión de SQLAlchemy.
         """
@@ -48,7 +50,7 @@ class ConexionDB:
 
 
     @contextmanager
-    def obtener_sesion(self):
+    def obtener_sesion(self) -> "Iterator[Session]":
         """
         Administra una sesión y su transacción.
 

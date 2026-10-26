@@ -7,6 +7,7 @@ class EntidadBase:
     """Clase base que proporciona un identificador a las entidades."""
 
     def __init__(self, id: int) -> None:
+        """Inicializa la instancia."""
         self._id = None
         self.id = id
 
@@ -34,6 +35,7 @@ class Genero(EntidadBase):
     """Representa un género literario."""
 
     def __init__(self, id: int, nombre: str) -> None:
+        """Inicializa la instancia."""
         super().__init__(id)
         self.nombre = nombre
 
@@ -61,6 +63,7 @@ class Editorial(EntidadBase):
     """Representa una editorial de libros."""
 
     def __init__(self, id: int, nombre: str) -> None:
+        """Inicializa la instancia."""
         super().__init__(id)
         self.nombre = nombre
 
@@ -94,6 +97,7 @@ class Moneda(EntidadBase):
         nombre: str,
         simbolo: str,
     ) -> None:
+        """Inicializa la instancia."""
         super().__init__(id)
         self.codigo = codigo
         self.nombre = nombre
@@ -156,6 +160,7 @@ class TipoCotizacion(EntidadBase):
     """Representa un tipo de cotización del dólar."""
 
     def __init__(self, id: int, nombre: str) -> None:
+        """Inicializa la instancia."""
         super().__init__(id)
         self.nombre = nombre
 
@@ -194,6 +199,7 @@ class Libro(EntidadBase):
         editorial: Editorial,
         genero: Genero,
     ) -> None:
+        """Inicializa la instancia."""
         super().__init__(id)
         self.isbn = isbn
         self.titulo = titulo
@@ -294,6 +300,7 @@ class Precio(EntidadBase):
         moneda: Moneda,
         valor: float,
     ) -> None:
+        """Inicializa la instancia."""
         super().__init__(id)
         self.libro = libro
         self.moneda = moneda
@@ -366,6 +373,7 @@ class Stock(EntidadBase):
         libro: Libro,
         cantidad: int,
     ) -> None:
+        """Inicializa la instancia."""
         super().__init__(id)
         self.libro = libro
         self.cantidad = cantidad
@@ -421,6 +429,7 @@ class CotizacionDolar(EntidadBase):
         valor_compra: float,
         valor_venta: float,
     ) -> None:
+        """Inicializa la instancia."""
         super().__init__(id)
         self.tipo_cotizacion = tipo_cotizacion
         self.moneda = moneda

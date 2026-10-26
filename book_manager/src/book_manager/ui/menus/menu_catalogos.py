@@ -17,6 +17,7 @@ class MenuCatalogos:
         mostrar_entidad: Callable,
         modificar_entidad: Callable,
     ) -> None:
+        """Inicializa la instancia."""
         self.titulo = titulo
         self.servicio = servicio
         self.crear_entidad = crear_entidad

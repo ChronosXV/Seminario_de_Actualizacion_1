@@ -12,15 +12,27 @@ from sqlalchemy.exc import IntegrityError
 
 from book_manager.models.models import CotizacionDolarModel
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from book_manager.services.services import (
+        ServicioBase,
+        ServicioLibro,
+        ServicioPrecio,
+        ServicioStock,
+        ServicioCotizacionDolar,
+    )
+
+
 
 class MenuCotizaciones:
     """Interfaz de consola para gestionar cotizaciones."""
 
     def __init__(
         self,
-        servicio_cotizaciones,
-        servicio_tipos_cotizacion,
-        servicio_monedas,
+        servicio_cotizaciones: "ServicioCotizacionDolar",
+        servicio_tipos_cotizacion: "ServicioBase",
+        servicio_monedas: "ServicioBase",
     ) -> None:
         """Inicializa el menú con sus servicios."""
         self.servicio = servicio_cotizaciones
