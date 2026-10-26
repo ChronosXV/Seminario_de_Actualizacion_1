@@ -20,8 +20,6 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
-from book_manager.auditoria.auditoria import auditar
-
 
 # ============================================================
 # CONVERTIR VALORES NUMÉRICOS
@@ -118,7 +116,6 @@ def leer_csv(ruta_csv):
 # GENERAR REPORTE EXCEL
 # ============================================================
 
-@auditar("GENERAR_REPORTE_EXCEL")
 def generar_excel(ruta_csv, ruta_excel=None):
     """
     Genera un archivo Excel con las cinco columnas
