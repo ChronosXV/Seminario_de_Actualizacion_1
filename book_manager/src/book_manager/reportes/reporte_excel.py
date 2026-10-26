@@ -27,7 +27,7 @@ from book_manager.auditoria.auditoria import auditar
 # CONVERTIR VALORES NUMÉRICOS
 # ============================================================
 
-def convertir_numero(valor):
+def convertir_numero(valor: str | None) -> float | None:
     """
     Convierte un valor del CSV a número.
 
@@ -53,7 +53,7 @@ def convertir_numero(valor):
 # CONVERTIR FECHA
 # ============================================================
 
-def convertir_fecha(valor):
+def convertir_fecha(valor: str | None) -> datetime | None:
     """
     Convierte la fecha de ejecución del CSV
     a un valor de fecha compatible con Excel.
@@ -73,7 +73,7 @@ def convertir_fecha(valor):
 # LEER CSV DEL EJERCICIO 04
 # ============================================================
 
-def leer_csv(ruta_csv):
+def leer_csv(ruta_csv: str | Path) -> list[dict[str, str | None]]:
     """
     Lee el CSV generado por el Ejercicio 04.
     """
@@ -119,7 +119,7 @@ def leer_csv(ruta_csv):
 # ============================================================
 
 @auditar("GENERAR_REPORTE_EXCEL")
-def generar_excel(ruta_csv, ruta_excel=None):
+def generar_excel(ruta_csv: str | Path, ruta_excel: str | Path | None = None) -> Path:
     """
     Genera un archivo Excel con las cinco columnas
     solicitadas en el Ejercicio 05.

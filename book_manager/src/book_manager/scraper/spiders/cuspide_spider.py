@@ -4,6 +4,9 @@ Spider para buscar libros del catálogo de Book Manager en Cúspide.
 
 Sprint 3 - Ejercicio 03.
 """
+from typing import Any, Iterator, AsyncIterator
+from scrapy.http import Response
+from scrapy import Request
 
 import json
 import re
@@ -30,7 +33,7 @@ class CuspideSpider(scrapy.Spider):
         },
     }
 
-    def __init__(self, titulos_json=None, *args, **kwargs):
+    def __init__(self, titulos_json: str | None = None, *args: Any, **kwargs: Any) -> None:
         """Recibe los títulos de los libros de nuestro catálogo."""
 
         super().__init__(*args, **kwargs)
@@ -58,7 +61,7 @@ class CuspideSpider(scrapy.Spider):
                 "No se recibieron títulos válidos."
             )
 
-    async def start(self):
+    async def start(self) -> AsyncIterator[Request]:
         """Genera una búsqueda por cada título del catálogo."""
 
         for titulo in self.titulos:
@@ -81,7 +84,7 @@ class CuspideSpider(scrapy.Spider):
                 dont_filter=True
             )
 
-    def parse(self, response, titulo_buscado):
+    def parse(self, response: Response, titulo_buscado: str) -> Iterator[Request]:
         """Obtiene hasta diez resultados de una búsqueda por título."""
 
         productos = response.css("div.product")
@@ -123,7 +126,7 @@ class CuspideSpider(scrapy.Spider):
             if encontrados >= 10:
                 break
 
-    def parse_libro(self, response, titulo_buscado):
+    def parse_libro(self, response: Response, titulo_buscado: str) -> Iterator[Any]:
         """Extrae los datos de cada resultado encontrado."""
 
         loader = LibroLoader(response=response)
@@ -276,7 +279,7 @@ class CuspideSpider(scrapy.Spider):
         yield item
 
     @staticmethod
-    def limpiar_descripcion(descripcion, titulo):
+    def limpiar_descripcion(descripcion: str, titulo: str | None) -> str:
         """
         Limpia la sinopsis del producto.
 
@@ -325,7 +328,7 @@ class CuspideSpider(scrapy.Spider):
         return texto
 
     @staticmethod
-    def buscar_descripcion(datos):
+    def buscar_descripcion(datos: Any) -> str | None:
         """
         Busca una descripción dentro de una estructura JSON-LD.
 

@@ -1,3 +1,4 @@
+from typing import Any
 
 """
 Ejercicio 04 - Book Manager.
@@ -58,7 +59,7 @@ COLUMNAS_CSV = [
 # NORMALIZACIÓN DE TÍTULOS
 # ============================================================
 
-def normalizar_titulo(titulo):
+def normalizar_titulo(titulo: str) -> str:
     """
     Normaliza títulos para comparar sin distinguir
     mayúsculas, tildes, puntuación ni espacios extra.
@@ -88,7 +89,7 @@ def normalizar_titulo(titulo):
 # SOLICITAR PORCENTAJE DE ALERTA
 # ============================================================
 
-def solicitar_umbral():
+def solicitar_umbral() -> Decimal:
     """
     Solicita al usuario el porcentaje mínimo
     de diferencia para generar una alerta.
@@ -121,7 +122,7 @@ def solicitar_umbral():
 # OBTENER CATÁLOGO DESDE SUPABASE
 # ============================================================
 
-def obtener_catalogo(conexion):
+def obtener_catalogo(conexion: ConexionDB) -> list[dict[str, Any]]:
     """
     Obtiene los libros y sus precios desde la base de datos.
     """
@@ -167,7 +168,7 @@ def obtener_catalogo(conexion):
 # OBTENER COTIZACIÓN OFICIAL DEL DÓLAR
 # ============================================================
 
-def obtener_dolar_oficial(conexion):
+def obtener_dolar_oficial(conexion: ConexionDB) -> dict[str, Any] | None:
     """
     Obtiene la última cotización oficial de venta
     del dólar registrada en Supabase.
@@ -222,7 +223,7 @@ def obtener_dolar_oficial(conexion):
 # CONVERTIR PRECIOS A PESOS ARGENTINOS
 # ============================================================
 
-def convertir_precios(catalogo, dolar_oficial):
+def convertir_precios(catalogo: list[dict[str, Any]], dolar_oficial: dict[str, Any] | None) -> list[dict[str, Any]]:
     """
     Convierte los precios USD a ARS utilizando
     la cotización oficial de venta.
@@ -275,7 +276,7 @@ def convertir_precios(catalogo, dolar_oficial):
 # EJECUTAR EL SPIDER
 # ============================================================
 
-def ejecutar_spider(proyecto, titulos, ruta_json):
+def ejecutar_spider(proyecto: Path, titulos: list[str], ruta_json: Path) -> list[dict[str, Any]]:
     """
     Ejecuta CuspideSpider utilizando los títulos
     obtenidos desde el catálogo de Supabase.
@@ -357,7 +358,7 @@ def ejecutar_spider(proyecto, titulos, ruta_json):
 # GENERAR COMPARACIONES Y ALERTAS
 # ============================================================
 
-def generar_reporte(catalogo, resultados_web, umbral, fecha):
+def generar_reporte(catalogo: list[dict[str, Any]], resultados_web: list[dict[str, Any]], umbral: Decimal, fecha: str) -> list[dict[str, Any]]:
     """
     Compara los precios internos con los precios web.
 
@@ -561,7 +562,7 @@ def generar_reporte(catalogo, resultados_web, umbral, fecha):
 # GUARDAR CSV
 # ============================================================
 
-def guardar_csv(ruta_csv, reporte):
+def guardar_csv(ruta_csv: Path, reporte: list[dict[str, Any]]) -> None:
     """
     Guarda todas las comparaciones en un CSV,
     incluyendo los libros sin alerta o coincidencia.
@@ -594,7 +595,7 @@ def guardar_csv(ruta_csv, reporte):
 # ============================================================
 
 @auditar("EJECUTAR_SCRAPER")
-def main():
+def main() -> Path:
     """
     Ejecuta el proceso completo del Ejercicio 04.
     """
