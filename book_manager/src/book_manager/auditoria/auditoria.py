@@ -5,10 +5,6 @@ Decorador para auditar operaciones de Book Manager.
 Registra la acción, fecha y detalles de cada operación
 en la tabla auditoria de la base de datos.
 """
-from typing import Callable, ParamSpec, TypeVar
-
-P = ParamSpec("P")
-R = TypeVar("R")
 
 from datetime import datetime
 from functools import wraps
@@ -32,7 +28,7 @@ def registrar_auditoria(accion: str, detalles: str) -> None:
         sesion.add(registro)
 
 
-def auditar(accion: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
+def auditar(accion: str):
     """
     Decorador que registra el resultado de una operación.
 
@@ -40,12 +36,10 @@ def auditar(accion: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
     a lanzar la excepción original.
     """
 
-    def decorador(funcion: Callable[P, R]) -> Callable[P, R]:
-        """Envuelve una función para registrar su ejecución."""
+    def decorador(funcion):
 
         @wraps(funcion)
-        def envoltura(*args: P.args, **kwargs: P.kwargs) -> R:
-            """Ejecuta la operación y registra su resultado."""
+        def envoltura(*args, **kwargs):
 
             try:
                 resultado = funcion(*args, **kwargs)

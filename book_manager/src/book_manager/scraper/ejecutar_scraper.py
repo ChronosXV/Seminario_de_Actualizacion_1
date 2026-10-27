@@ -29,6 +29,8 @@ from book_manager.models.models import (
     TipoCotizacionModel,
 )
 
+from book_manager.auditoria.auditoria import auditar
+
 
 # ============================================================
 # COLUMNAS DEL REPORTE
@@ -591,6 +593,7 @@ def guardar_csv(ruta_csv, reporte):
 # PROCESO PRINCIPAL
 # ============================================================
 
+@auditar("EJECUTAR_SCRAPER")
 def main():
     """
     Ejecuta el proceso completo del Ejercicio 04.
