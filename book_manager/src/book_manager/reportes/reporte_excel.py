@@ -20,14 +20,12 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
-from book_manager.auditoria.auditoria import auditar
-
 
 # ============================================================
 # CONVERTIR VALORES NUMÉRICOS
 # ============================================================
 
-def convertir_numero(valor: str | None) -> float | None:
+def convertir_numero(valor):
     """
     Convierte un valor del CSV a número.
 
@@ -53,7 +51,7 @@ def convertir_numero(valor: str | None) -> float | None:
 # CONVERTIR FECHA
 # ============================================================
 
-def convertir_fecha(valor: str | None) -> datetime | None:
+def convertir_fecha(valor):
     """
     Convierte la fecha de ejecución del CSV
     a un valor de fecha compatible con Excel.
@@ -73,7 +71,7 @@ def convertir_fecha(valor: str | None) -> datetime | None:
 # LEER CSV DEL EJERCICIO 04
 # ============================================================
 
-def leer_csv(ruta_csv: str | Path) -> list[dict[str, str | None]]:
+def leer_csv(ruta_csv):
     """
     Lee el CSV generado por el Ejercicio 04.
     """
@@ -118,8 +116,7 @@ def leer_csv(ruta_csv: str | Path) -> list[dict[str, str | None]]:
 # GENERAR REPORTE EXCEL
 # ============================================================
 
-@auditar("GENERAR_REPORTE_EXCEL")
-def generar_excel(ruta_csv: str | Path, ruta_excel: str | Path | None = None) -> Path:
+def generar_excel(ruta_csv, ruta_excel=None):
     """
     Genera un archivo Excel con las cinco columnas
     solicitadas en el Ejercicio 05.
