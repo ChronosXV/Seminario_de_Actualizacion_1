@@ -1,4 +1,3 @@
-from typing import Any
 
 """
 Ejercicio 04 - Book Manager.
@@ -30,8 +29,6 @@ from book_manager.models.models import (
     TipoCotizacionModel,
 )
 
-from book_manager.auditoria.auditoria import auditar
-
 
 # ============================================================
 # COLUMNAS DEL REPORTE
@@ -59,7 +56,7 @@ COLUMNAS_CSV = [
 # NORMALIZACIÓN DE TÍTULOS
 # ============================================================
 
-def normalizar_titulo(titulo: str) -> str:
+def normalizar_titulo(titulo):
     """
     Normaliza títulos para comparar sin distinguir
     mayúsculas, tildes, puntuación ni espacios extra.
@@ -89,7 +86,7 @@ def normalizar_titulo(titulo: str) -> str:
 # SOLICITAR PORCENTAJE DE ALERTA
 # ============================================================
 
-def solicitar_umbral() -> Decimal:
+def solicitar_umbral():
     """
     Solicita al usuario el porcentaje mínimo
     de diferencia para generar una alerta.
@@ -122,7 +119,7 @@ def solicitar_umbral() -> Decimal:
 # OBTENER CATÁLOGO DESDE SUPABASE
 # ============================================================
 
-def obtener_catalogo(conexion: ConexionDB) -> list[dict[str, Any]]:
+def obtener_catalogo(conexion):
     """
     Obtiene los libros y sus precios desde la base de datos.
     """
@@ -168,7 +165,7 @@ def obtener_catalogo(conexion: ConexionDB) -> list[dict[str, Any]]:
 # OBTENER COTIZACIÓN OFICIAL DEL DÓLAR
 # ============================================================
 
-def obtener_dolar_oficial(conexion: ConexionDB) -> dict[str, Any] | None:
+def obtener_dolar_oficial(conexion):
     """
     Obtiene la última cotización oficial de venta
     del dólar registrada en Supabase.
@@ -223,7 +220,7 @@ def obtener_dolar_oficial(conexion: ConexionDB) -> dict[str, Any] | None:
 # CONVERTIR PRECIOS A PESOS ARGENTINOS
 # ============================================================
 
-def convertir_precios(catalogo: list[dict[str, Any]], dolar_oficial: dict[str, Any] | None) -> list[dict[str, Any]]:
+def convertir_precios(catalogo, dolar_oficial):
     """
     Convierte los precios USD a ARS utilizando
     la cotización oficial de venta.
@@ -276,7 +273,7 @@ def convertir_precios(catalogo: list[dict[str, Any]], dolar_oficial: dict[str, A
 # EJECUTAR EL SPIDER
 # ============================================================
 
-def ejecutar_spider(proyecto: Path, titulos: list[str], ruta_json: Path) -> list[dict[str, Any]]:
+def ejecutar_spider(proyecto, titulos, ruta_json):
     """
     Ejecuta CuspideSpider utilizando los títulos
     obtenidos desde el catálogo de Supabase.
@@ -358,7 +355,7 @@ def ejecutar_spider(proyecto: Path, titulos: list[str], ruta_json: Path) -> list
 # GENERAR COMPARACIONES Y ALERTAS
 # ============================================================
 
-def generar_reporte(catalogo: list[dict[str, Any]], resultados_web: list[dict[str, Any]], umbral: Decimal, fecha: str) -> list[dict[str, Any]]:
+def generar_reporte(catalogo, resultados_web, umbral, fecha):
     """
     Compara los precios internos con los precios web.
 
@@ -562,7 +559,7 @@ def generar_reporte(catalogo: list[dict[str, Any]], resultados_web: list[dict[st
 # GUARDAR CSV
 # ============================================================
 
-def guardar_csv(ruta_csv: Path, reporte: list[dict[str, Any]]) -> None:
+def guardar_csv(ruta_csv, reporte):
     """
     Guarda todas las comparaciones en un CSV,
     incluyendo los libros sin alerta o coincidencia.
@@ -594,8 +591,7 @@ def guardar_csv(ruta_csv: Path, reporte: list[dict[str, Any]]) -> None:
 # PROCESO PRINCIPAL
 # ============================================================
 
-@auditar("EJECUTAR_SCRAPER")
-def main() -> Path:
+def main():
     """
     Ejecuta el proceso completo del Ejercicio 04.
     """
